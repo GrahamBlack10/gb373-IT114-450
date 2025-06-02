@@ -26,16 +26,17 @@ public class Problem2 extends BaseClass {
          // gb373 06/2/2025
          //step 1: iterate through the array by using a for loop
          //step 2: add each value to the total
-      
+        for (int i = 0; i < arr.length; i++) {
+            total += arr[i];
+        }
 
         
       
-        
         // Solve Challenge 2 here
         Object modifiedTotal = "?";
 
         //step 3: convert the total to a string with 2 decimal places
-        
+        modifiedTotal = String.format("%.2f", total);
         
         // End Solution Edits
         System.out.println("Total Raw Value: " +total);
