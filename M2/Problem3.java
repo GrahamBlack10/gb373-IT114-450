@@ -25,6 +25,25 @@ public class Problem3 extends BaseClass {
         // Step 4: Convert the number back to its original data type using instanceof
         // Step 5: Assign the positive value to the output array
        
+         for (int i = 0; i < arr.length; i++) {
+            if (arr[i] instanceof Integer) {
+                output[i] = Math.abs((Integer) arr[i]);
+            } else if (arr[i] instanceof Double) {
+                output[i] = Math.abs((Double) arr[i]);
+            } else if (arr[i] instanceof Float) {
+                output[i] = Math.abs((Float) arr[i]);
+            } else if (arr[i] instanceof String) {
+                try {
+                    output[i] = String.valueOf(Math.abs(Double.parseDouble((String) arr[i])));
+                } catch (NumberFormatException e) {
+                    output[i] = "Invalid number format";
+                }
+            } else if (arr[i] instanceof Number) {
+                output[i] = Math.abs(((Number) arr[i]).doubleValue());
+            } else {
+                output[i] = "Unsupported type";
+            }
+        }
 
         // End Solution Edits
         System.out.println("Output: ");
