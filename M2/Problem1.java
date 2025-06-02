@@ -16,7 +16,21 @@ public class Problem1 extends BaseClass {
         System.out.print("Output Array: ");
         // Start Solution Edits
         
+        // gb373 06/2/2025
+        
+        // Step 1: iterate through the array by using a for loop
+        // Step 2: Check if the value is odd by using an if statement 
+        // Step 3: If the value is odd, print it out and use a comma to separate the values and not add a comma for the last number
+        for(int i = 0; i < arr.length; i++){
+            if(arr[i] % 2 != 0){
+                System.out.print(arr[i]);
+                if(i < arr.length - 1) {
+                    System.out.print(", ");
+                }
+            }
+        }
 
+        
         // End Solution Edits
         System.out.println("");
         System.out.println("______________________________________");
