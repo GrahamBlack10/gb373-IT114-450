@@ -42,6 +42,63 @@ public class Problem4 extends BaseClass {
         // Step 6: Extract the middle 3 characters from the string by finding the middle index and checking if there are enough characters using substring
         // Step 7: If there are not enough characters, assign "Not enough characters" to placeholderForMiddleCharacters
 
+        String original = arr[i];
+        String cleaned = "";
+
+        for (int j = 0; j < original.length(); j++) {
+            char c = original.charAt(j);
+            if (Character.isLetterOrDigit(c) || Character.isSpaceChar(c)) {
+                cleaned += c;
+            }
+        }
+
+        cleaned = cleaned.trim();
+
+        String singleSpaced = "";
+        boolean spaceFound = false;
+        for (int j = 0; j < cleaned.length(); j++) {
+            char c = cleaned.charAt(j);
+            if (c == ' ') {
+                if (!spaceFound) {
+                    singleSpaced += c;
+                    spaceFound = true;
+                }
+            } else {
+                singleSpaced += c;
+                spaceFound = false;
+            }
+        }
+
+        String titleCase = "";
+        boolean capitalizeNext = true;
+        for (int j = 0; j < singleSpaced.length(); j++) {
+            char c = singleSpaced.charAt(j);
+            if (c == ' ') {
+                titleCase += c;
+                capitalizeNext = true;
+            } else if (capitalizeNext) {
+                titleCase += Character.toUpperCase(c);
+                capitalizeNext = false;
+            } else {
+                titleCase += Character.toLowerCase(c);
+            }
+        }
+
+        String middleChars = "";
+        if (titleCase.length() >= 3) {
+            int middleIndex = titleCase.length() / 2;
+            if (middleIndex - 1 >= 0 && middleIndex + 1 < titleCase.length()) {
+                middleChars = titleCase.substring(middleIndex - 1, middleIndex + 2);
+            } else {
+                middleChars = titleCase.substring(titleCase.length() - 3);
+            }
+        } else {
+            middleChars = "Not enough characters";
+        }
+
+        placeholderForModifiedPhrase = titleCase;
+        placeholderForMiddleCharacters = middleChars;
+
             // End Solution Edits
             System.out.println(String.format("Index[%d] \"%s\" | Middle: \"%s\"",i, placeholderForModifiedPhrase, placeholderForMiddleCharacters));
         }
