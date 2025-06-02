@@ -21,11 +21,22 @@ public class Problem2 extends BaseClass {
         double total = 0;
         // Start Solution Edits
         // Solve Challenge 1 here
+
+
+         // gb373 06/2/2025
+         //step 1: iterate through the array by using a for loop
+         //step 2: add each value to the total
+      
+
         
       
+        
         // Solve Challenge 2 here
         Object modifiedTotal = "?";
 
+        //step 3: convert the total to a string with 2 decimal places
+        
+        
         // End Solution Edits
         System.out.println("Total Raw Value: " +total);
         System.out.println("Total Modified Value: " + modifiedTotal);
@@ -34,7 +45,7 @@ public class Problem2 extends BaseClass {
     }
 
     public static void main(String[] args) {
-        final String ucid = "mt85"; // <-- change to your UCID
+        final String ucid = "gb373"; // <-- change to your UCID
         // no edits below this line
         printHeader(ucid, 2);
         sumValues(array1, 1);
