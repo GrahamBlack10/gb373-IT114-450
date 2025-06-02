@@ -17,7 +17,30 @@ public class Problem3 extends BaseClass {
         // Step 3: Add code to solve the problem (add/commit as needed)
         Object[] output = new Object[arr.length];
         // Start Solution Edits
-        
+
+         // gb373 06/2/2025
+        // Step 1: Iterate through the array using a for loop
+        // Step 2: Check the type of each element and convert it to positive
+        // Step 3: Assign the positive value back to the output array in the same index
+        for (int i = 0; i < arr.length; i++) {
+            if (arr[i] instanceof Integer) {
+                output[i] = Math.abs((Integer) arr[i]);
+            } else if (arr[i] instanceof Double) {
+                output[i] = Math.abs((Double) arr[i]);
+            } else if (arr[i] instanceof Float) {
+                output[i] = Math.abs((Float) arr[i]);
+            } else if (arr[i] instanceof String) {
+                try {
+                    output[i] = String.valueOf(Math.abs(Double.parseDouble((String) arr[i])));
+                } catch (NumberFormatException e) {
+                    output[i] = "Invalid number format";
+                }
+            } else if (arr[i] instanceof Number) {
+                output[i] = Math.abs(((Number) arr[i]).doubleValue());
+            } else {
+                output[i] = "Unsupported type";
+            }
+        }
 
         // End Solution Edits
         System.out.println("Output: ");
@@ -27,7 +50,7 @@ public class Problem3 extends BaseClass {
     }
 
     public static void main(String[] args) {
-        final String ucid = "mt85"; // <-- change to your UCID
+        final String ucid = "gb373"; // <-- change to your UCID
         // no edits below this line
         printHeader(ucid, 3);
         bePositive(array1, 1);
