@@ -22,7 +22,7 @@ public class Problem1 extends BaseClass {
         System.out.println("______________________________________");
     }
     public static void main(String[] args) {
-        final String ucid = "mt85"; // <-- change to your UCID
+        final String ucid = "gb373"; // <-- change to your UCID
         // no edits below this line
         printHeader(ucid, 1);
         printOdds(array1,1);
