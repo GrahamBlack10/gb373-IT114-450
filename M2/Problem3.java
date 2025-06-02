@@ -18,29 +18,13 @@ public class Problem3 extends BaseClass {
         Object[] output = new Object[arr.length];
         // Start Solution Edits
 
-         // gb373 06/2/2025
+        // gb373 06/2/2025
         // Step 1: Iterate through the array using a for loop
-        // Step 2: Check the type of each element and convert it to positive
-        // Step 3: Assign the positive value back to the output array in the same index
-        for (int i = 0; i < arr.length; i++) {
-            if (arr[i] instanceof Integer) {
-                output[i] = Math.abs((Integer) arr[i]);
-            } else if (arr[i] instanceof Double) {
-                output[i] = Math.abs((Double) arr[i]);
-            } else if (arr[i] instanceof Float) {
-                output[i] = Math.abs((Float) arr[i]);
-            } else if (arr[i] instanceof String) {
-                try {
-                    output[i] = String.valueOf(Math.abs(Double.parseDouble((String) arr[i])));
-                } catch (NumberFormatException e) {
-                    output[i] = "Invalid number format";
-                }
-            } else if (arr[i] instanceof Number) {
-                output[i] = Math.abs(((Number) arr[i]).doubleValue());
-            } else {
-                output[i] = "Unsupported type";
-            }
-        }
+        // Step 2: Check the type of each number using instanceof and if else statements
+        // Step 3: use Math.abs() to convert the number to positive
+        // Step 4: Convert the number back to its original data type using instanceof
+        // Step 5: Assign the positive value to the output array
+       
 
         // End Solution Edits
         System.out.println("Output: ");
