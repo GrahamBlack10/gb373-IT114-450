@@ -1,0 +1,124 @@
+package M2;
+
+public class Problem4 extends BaseClass {
+    private static String[] array1 = { "hello world!", "java programming", "special@#$%^&characters", "numbers 123 456",
+            "mIxEd CaSe InPut!" };
+    private static String[] array2 = { "hello world", "java programming", "this is a title case test",
+            "capitalize every word", "mixEd CASE input" };
+    private static String[] array3 = { "  hello   world  ", "java    programming  ",
+            "  extra    spaces  between   words   ",
+            "      leading and trailing spaces      ", "multiple      spaces" };
+    private static String[] array4 = { "hello world", "java programming", "short", "a", "even" };
+
+    private static void transformText(String[] arr, int arrayNumber) {
+        // Only make edits between the designated "Start" and "End" comments
+        printArrayInfoBasic(arr, arrayNumber);
+
+        // Challenge 1: Remove non-alphanumeric characters except spaces
+        // Challenge 2: Convert text to Title Case
+        // Challenge 3: Trim leading/trailing spaces and remove duplicate spaces
+        // Result 1-3: Assign final phrase to `placeholderForModifiedPhrase`
+        // Challenge 4 (extra credit): Extract middle 3 characters (beginning starts at middle of phrase),
+        // assign to 'placeholderForMiddleCharacters'
+        // if not enough characters assign "Not enough characters"
+ 
+        // Step 1: sketch out plan using comments (include ucid and date)
+        // Step 2: Add/commit your outline of comments (required for full credit)
+        // Step 3: Add code to solve the problem (add/commit as needed)
+        String placeholderForModifiedPhrase = "";
+        String placeholderForMiddleCharacters = "";
+        
+        for(int i = 0; i <arr.length; i++){
+           // Start Solution Edits
+
+        // gb373 06/2/2025
+        // Step 1: Iterate through the array using a for loop
+        // Step 2: For each string, remove non-alphanumeric characters except spaces using a loop and isLetterOrDigit and isSpaceChar
+        // Step 3: Trim leading and trailing spaces using trim()
+        // Step 4: Remove duplicate spaces by iterating through the string and checking for consecutive spaces using a boolean
+        // Step 5: Convert the string to Title Case by iterating through the string and checking for spaces using a boolean
+
+        // Extera Credit 
+        // Step 6: Extract the middle 3 characters from the string by finding the middle index and checking if there are enough characters using substring
+        // Step 7: If there are not enough characters, assign "Not enough characters" to placeholderForMiddleCharacters
+
+        String original = arr[i];
+        String cleaned = "";
+
+        for (int j = 0; j < original.length(); j++) {
+            char c = original.charAt(j);
+            if (Character.isLetterOrDigit(c) || Character.isSpaceChar(c)) {
+                cleaned += c;
+            }
+        }
+
+        cleaned = cleaned.trim();
+
+        String singleSpaced = "";
+        boolean spaceFound = false;
+        for (int j = 0; j < cleaned.length(); j++) {
+            char c = cleaned.charAt(j);
+            if (c == ' ') {
+                if (!spaceFound) {
+                    singleSpaced += c;
+                    spaceFound = true;
+                }
+            } else {
+                singleSpaced += c;
+                spaceFound = false;
+            }
+        }
+
+        String titleCase = "";
+        boolean capitalizeNext = true;
+        for (int j = 0; j < singleSpaced.length(); j++) {
+            char c = singleSpaced.charAt(j);
+            if (c == ' ') {
+                titleCase += c;
+                capitalizeNext = true;
+            } else if (capitalizeNext) {
+                titleCase += Character.toUpperCase(c);
+                capitalizeNext = false;
+            } else {
+                titleCase += Character.toLowerCase(c);
+            }
+        }
+
+        String middleChars = "";
+        if (titleCase.length() >= 3) {
+            int middleIndex = titleCase.length() / 2;
+            if (middleIndex - 1 >= 0 && middleIndex + 1 < titleCase.length()) {
+                middleChars = titleCase.substring(middleIndex - 1, middleIndex + 2);
+            } else {
+                middleChars = titleCase.substring(titleCase.length() - 3);
+            }
+        } else {
+            middleChars = "Not enough characters";
+        }
+
+        placeholderForModifiedPhrase = titleCase;
+        placeholderForMiddleCharacters = middleChars;
+
+            // End Solution Edits
+            System.out.println(String.format("Index[%d] \"%s\" | Middle: \"%s\"",i, placeholderForModifiedPhrase, placeholderForMiddleCharacters));
+        }
+
+       
+
+        
+        System.out.println("\n______________________________________");
+    }
+
+    public static void main(String[] args) {
+        final String ucid = "gb373"; // <-- change to your UCID
+        // No edits below this line
+        printHeader(ucid, 4);
+
+        transformText(array1, 1);
+        transformText(array2, 2);
+        transformText(array3, 3);
+        transformText(array4, 4);
+        printFooter(ucid, 4);
+    }
+
+}
