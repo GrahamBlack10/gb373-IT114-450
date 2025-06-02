@@ -29,9 +29,20 @@ public class Problem4 extends BaseClass {
         String placeholderForMiddleCharacters = "";
         
         for(int i = 0; i <arr.length; i++){
-            // Start Solution Edits
-            
-             // End Solution Edits
+           // Start Solution Edits
+
+        // gb373 06/2/2025
+        // Step 1: Iterate through the array using a for loop
+        // Step 2: For each string, remove non-alphanumeric characters except spaces using a loop and isLetterOrDigit and isSpaceChar
+        // Step 3: Trim leading and trailing spaces using trim()
+        // Step 4: Remove duplicate spaces by iterating through the string and checking for consecutive spaces using a boolean
+        // Step 5: Convert the string to Title Case by iterating through the string and checking for spaces using a boolean
+
+        // Extera Credit 
+        // Step 6: Extract the middle 3 characters from the string by finding the middle index and checking if there are enough characters using substring
+        // Step 7: If there are not enough characters, assign "Not enough characters" to placeholderForMiddleCharacters
+
+            // End Solution Edits
             System.out.println(String.format("Index[%d] \"%s\" | Middle: \"%s\"",i, placeholderForModifiedPhrase, placeholderForMiddleCharacters));
         }
 
@@ -42,7 +53,7 @@ public class Problem4 extends BaseClass {
     }
 
     public static void main(String[] args) {
-        final String ucid = "mt85"; // <-- change to your UCID
+        final String ucid = "gb373"; // <-- change to your UCID
         // No edits below this line
         printHeader(ucid, 4);
 
