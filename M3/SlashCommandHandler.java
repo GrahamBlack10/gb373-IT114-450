@@ -70,7 +70,7 @@ public class SlashCommandHandler extends BaseClass {
                 try {
                     int num = Integer.parseInt(parts[0].trim());
                     int sides = Integer.parseInt(parts[1].trim());
-                    int result = (int) (Math.random() * sides) + 1; // Simulate a dice roll
+                    int result = (int) (Math.random() * sides) + 1; 
                     System.out.println("Rolled " + num + "d" + sides + " and got " + result + "!");
                 } catch (NumberFormatException e) {
                     System.out.println("Error: Invalid numbers in roll command.");
