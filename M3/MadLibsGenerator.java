@@ -40,7 +40,7 @@ public class MadLibsGenerator extends BaseClass {
         // This program implements a Mad Libs generator that loads a random story from a the folder.
         // It extracts each line into a collection (ArrayList), then is asks the user for each placeholder.
         // The user input replaces the placeholders in the story, and the final story is displayed to the user.
-        // The placeholders with underscores are displayed with spaces instead, and the program handles cases where no stories are available.
+        // The placeholders with underscores are displayed with spaces instead, and the code handles cases where no stories are available.
 
 
 
