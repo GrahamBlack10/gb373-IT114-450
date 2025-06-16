@@ -144,6 +144,14 @@ public class Client {
             } else {
                 System.out.println("Usage: /pm <targetId> <message>");
             }
+        // ucid gb373 date 06/16/2025
+        // Brief Summary: Shuffle command to shuffle a message
+        // This command takes a message and shuffles its characters, then sends the shuffled message to all connected clients
+        } else if (text.startsWith("/shuffle ")) {
+            text = text.replace("/shuffle ", "").trim();
+            String[] commandData = { Constants.COMMAND_TRIGGER, "shuffle", text };
+            sendToServer(String.join(",", commandData));
+            wasCommand = true; 
         }
         return wasCommand;
         

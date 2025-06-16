@@ -220,6 +220,16 @@ public class ServerThread extends Thread {
                             wasCommand = true;
                         }
                         break;
+                    // ucid gb373 date 06/16/2025
+                    // Brief Summary: case for shuffling text
+                    // This case handles the shuffle command
+                    case "shuffle":
+                        if (commandData.length >= 3) {
+                            String messageToShuffle = String.join(" ", Arrays.copyOfRange(commandData, 2, commandData.length));
+                            server.handleShuffle(this, messageToShuffle);
+                            wasCommand = true;
+                        }
+                        break;
                     default:
                         break;
                 }

@@ -152,7 +152,32 @@ public class Server {
         } else {
             sender.sendToClient(String.format("User[%s] not found for private message", targetId));
         }
+    }
+    // ucid gb373 date 06/16/2025
+    // Brief Summary: handle shuffle shuffles the words in a message
+    // This method takes a message, shuffles each word, and relays the shuffled message to all connected clients
+    protected synchronized void handleShuffle(ServerThread sender, String message) {
+        String[] words = message.split(" ");
+        StringBuilder shuffledMessage = new StringBuilder();
+        for (String word : words) {
+            shuffledMessage.append(shuffleWord(word)).append(" ");
+        }
+        shuffledMessage.setLength(shuffledMessage.length() - 1); // Remove trailing space
+        relay(null, "Shuffled from User[" + sender.getClientId() + "]: " + shuffledMessage.toString());
+    }
+
+    private String shuffleWord(String word) {
+        char[] characters = word.toCharArray();
+        for (int i = characters.length - 1; i > 0; i--) {
+            int j = (int) (Math.random() * (i + 1));
+            char temp = characters[i];
+            characters[i] = characters[j];
+            characters[j] = temp;
+        }
+        return new String(characters);
+
 }
+   
     // end handle actions
 
     public static void main(String[] args) {
