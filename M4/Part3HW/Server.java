@@ -162,7 +162,7 @@ public class Server {
         for (String word : words) {
             shuffledMessage.append(shuffleWord(word)).append(" ");
         }
-        shuffledMessage.setLength(shuffledMessage.length() - 1); // Remove trailing space
+        shuffledMessage.setLength(shuffledMessage.length() - 1); 
         relay(null, "Shuffled from User[" + sender.getClientId() + "]: " + shuffledMessage.toString());
     }
 
