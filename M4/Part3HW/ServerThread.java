@@ -202,6 +202,13 @@ public class ServerThread extends Thread {
                         wasCommand = true;
                         break;
                     // added more cases/breaks as needed for other commands
+                    // ucid gb373 date 06/16/2025
+                    // Brief Summary: case for flipping text
+                    // This case handles the flip command
+                    case "flip":
+                        server.handleFlip(this); // Call server method for coin flip
+                        wasCommand = true;
+                        break;
                     default:
                         break;
                 }

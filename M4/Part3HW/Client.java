@@ -121,7 +121,15 @@ public class Client {
             String[] commandData = { Constants.COMMAND_TRIGGER, "reverse", text };
             sendToServer(String.join(",", commandData));
             wasCommand = true;
-        }
+            // ucid gb373 date 06/16/2025
+            // Breif Summary: Flip command to flip the text
+            // This command reverses the text and sends it to the server
+        } else if (text.startsWith("/flip")) {
+            text = text.replace("/flip", "").trim();
+            String[] commandData = { Constants.COMMAND_TRIGGER, "flip", text };
+            sendToServer(String.join(",", commandData));
+            wasCommand = true;
+        } 
         return wasCommand;
     }
 

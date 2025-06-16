@@ -130,6 +130,16 @@ public class Server {
     protected synchronized void handleMessage(ServerThread sender, String text) {
         relay(sender, text);
     }
+    // ucid gb373 date 06/16/2025
+    // Brief Summary: handle flip does the coin flip action
+    // This method generates a random outcome of heads or tails
+    // and relays the result to all connected clients
+    protected synchronized void handleFlip(ServerThread sender) {
+        String[] outcomes = { "heads", "tails" };
+        int result = (int) (Math.random() * outcomes.length);
+        String message = String.format("User[%s] flipped a coin and got %s", sender.getClientId(), outcomes[result]);
+        relay(null, message); 
+    }
     // end handle actions
 
     public static void main(String[] args) {
