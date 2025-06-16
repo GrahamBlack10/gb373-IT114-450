@@ -129,8 +129,24 @@ public class Client {
             String[] commandData = { Constants.COMMAND_TRIGGER, "flip", text };
             sendToServer(String.join(",", commandData));
             wasCommand = true;
-        } 
+            // ucid gb373 date 06/16/2025
+            // Brief Summary: Private message command to send a message to a specific user
+            // This command allows users to send private messages to other users and only that certain user gets the message
+        } else if (text.startsWith("/pm")) {
+            text = text.replace("/pm", "").trim();
+            String[] parts = text.split(" ", 2); 
+            if (parts.length == 2) {
+                String targetId = parts[0];
+                String message = parts[1];
+                String[] commandData = { Constants.COMMAND_TRIGGER, "pm", targetId, message };
+                sendToServer(String.join(",", commandData));
+                wasCommand = true;
+            } else {
+                System.out.println("Usage: /pm <targetId> <message>");
+            }
+        }
         return wasCommand;
+        
     }
 
     public void start() throws IOException {

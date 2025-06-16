@@ -140,6 +140,19 @@ public class Server {
         String message = String.format("User[%s] flipped a coin and got %s", sender.getClientId(), outcomes[result]);
         relay(null, message); 
     }
+    // ucid gb373 date 06/16/2025
+    // Brief Summary: handle private message sends a message to a specific user
+    // This method allows users to send private messages to other users and only that certain user gest the message
+    public void handlePrivateMessage(ServerThread sender, long targetId, String message) {
+    ServerThread targetClient = connectedClients.get(targetId);
+        if (targetClient != null) {
+            String formattedMessage = String.format("Private from User[%s]: %s", sender.getClientId(), message);
+            targetClient.sendToClient(formattedMessage);   
+            sender.sendToClient(formattedMessage);        
+        } else {
+            sender.sendToClient(String.format("User[%s] not found for private message", targetId));
+        }
+}
     // end handle actions
 
     public static void main(String[] args) {

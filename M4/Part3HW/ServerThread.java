@@ -209,6 +209,17 @@ public class ServerThread extends Thread {
                         server.handleFlip(this); // Call server method for coin flip
                         wasCommand = true;
                         break;
+                    // ucid gb373 date 06/16/2025
+                    // Brief Summary: case for private messaging
+                    // This case handles the private message command
+                    case "pm":
+                        if (commandData.length >= 4) {
+                            long targetId = Long.parseLong(commandData[2]);
+                            String privateMessage = String.join(" ", Arrays.copyOfRange(commandData, 3, commandData.length));
+                            server.handlePrivateMessage(this, targetId, privateMessage);
+                            wasCommand = true;
+                        }
+                        break;
                     default:
                         break;
                 }
