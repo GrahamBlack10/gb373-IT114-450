@@ -120,6 +120,9 @@ public enum Client {
         if (text.startsWith(Constants.COMMAND_TRIGGER)) {
             text = text.substring(1); // remove the /
             // System.out.println("Checking command: " + text);
+            //UCID gb373
+            //Date 6/30/2025
+            // Summary: handles the /connect command to connect to a server
             if (isConnection("/" + text)) {
                 if (myUser.getClientName() == null || myUser.getClientName().isEmpty()) {
                     System.out.println(
@@ -133,6 +136,9 @@ public enum Client {
                 connect(parts[0].trim(), Integer.parseInt(parts[1].trim()));
                 sendClientName(myUser.getClientName());// sync follow-up data (handshake)
                 wasCommand = true;
+                //UCID gb373
+                //Date 6/30/2025
+                // Summary: /name command to set the client's name
             } else if (text.startsWith(Command.NAME.command)) {
                 text = text.replace(Command.NAME.command, "").trim();
                 if (text == null || text.length() == 0) {
@@ -153,6 +159,9 @@ public enum Client {
             } else if (Command.QUIT.command.equalsIgnoreCase(text)) {
                 close();
                 wasCommand = true;
+                // UCID gb373
+                // Date 6/30/2025
+                // Summary: handles the /disconnect command to disconnect from the server
             } else if (Command.DISCONNECT.command.equalsIgnoreCase(text)) {
                 sendDisconnect();
                 wasCommand = true;
@@ -160,6 +169,9 @@ public enum Client {
                 text = text.replace(Command.REVERSE.command, "").trim();
                 sendReverse(text);
                 wasCommand = true;
+                // UCID gb373
+                // Date 6/30/2025
+                // Summary: handles the /leaveroom and /createroom commands 
             } else if (text.startsWith(Command.CREATE_ROOM.command)) {
                 text = text.replace(Command.CREATE_ROOM.command, "").trim();
                 if (text == null || text.length() == 0) {
@@ -195,6 +207,10 @@ public enum Client {
      * @param roomAction (join, leave, create)
      * @throws IOException
      */
+    // UCID gb373
+    // Date 6/30/2025
+    // Summary: Sends a room action to the server, such as creating, joining, or
+    // leaving a room.
     private void sendRoomAction(String roomName, RoomAction roomAction) throws IOException {
         Payload payload = new Payload();
         payload.setMessage(roomName);
@@ -234,6 +250,10 @@ public enum Client {
      * 
      * @throws IOException
      */
+    // UCID gb373
+    // Date 6/30/2025
+    // Summary: Sends a disconnect payload to the server, indicating that the
+    // client wishes to disconnect.
     private void sendDisconnect() throws IOException {
         Payload payload = new Payload();
         payload.setPayloadType(PayloadType.DISCONNECT);
@@ -246,6 +266,10 @@ public enum Client {
      * @param message
      * @throws IOException
      */
+    //UCID gb373
+    //Date 6/30/2025
+    // Summary: Sends a message to the server, which will then broadcast it to other
+    // clients in the room.
     private void sendMessage(String message) throws IOException {
         Payload payload = new Payload();
         payload.setMessage(message);
@@ -266,6 +290,9 @@ public enum Client {
         sendToServer(payload);
     }
 
+    // UCID gb373
+    // Date 6/30/2025
+    // Summary: Sends a Payload object to the server if connected. Includes room actions
     private void sendToServer(Payload payload) throws IOException {
         if (isConnected()) {
             out.writeObject(payload);
@@ -290,6 +317,9 @@ public enum Client {
     /**
      * Listens for messages from the server
      */
+    // UCID gb373
+    // Date 6/30/2025
+    // Summary: Listens for incoming messages from the server and handles disconnections
     private void listenToServer() {
         try {
             while (isRunning && isConnected()) {
@@ -326,6 +356,9 @@ public enum Client {
             case DISCONNECT:
                 processDisconnect(payload);
                 break;
+                //UCID gb373
+                //Date 6/30/2025
+                // Summary: Handles the payload types for messages between the client and server.
             case MESSAGE:
                 processMessage(payload);
                 break;
@@ -356,6 +389,9 @@ public enum Client {
             System.out.println(TextFX.colorize("Client ID already set, this shouldn't happen", Color.YELLOW));
 
         }
+        // UCID gb373
+        // Date 6/30/2025
+        // Summary: Conformation from the server that the client is connected
         myUser.setClientId(payload.getClientId());
         myUser.setClientName(((ConnectionPayload) payload).getClientName());// confirmation from Server
         knownClients.put(myUser.getClientId(), myUser);
@@ -462,6 +498,10 @@ public enum Client {
     /**
      * Closes the server connection and associated resources
      */
+    // UCID gb373
+    // Date 6/30/2025
+    // Summary: Closes the server connection and associated resources, ensuring a clean
+    // shutdown.
     private void closeServerConnection() {
         try {
             if (out != null) {

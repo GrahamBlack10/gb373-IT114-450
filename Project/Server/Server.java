@@ -26,6 +26,9 @@ public enum Server {
         System.out.println(TextFX.colorize(String.format("Server: %s", message), Color.YELLOW));
     }
 
+    //UCID gb373
+    //Date 6/30/2025
+    // Summary: Private constructor sets a shutdown hook for graceful JVM shutdown cleanup.
     private Server() {
         Runtime.getRuntime().addShutdownHook(new Thread(() -> {
             info("JVM is shutting down. Perform cleanup tasks.");
@@ -36,6 +39,9 @@ public enum Server {
     /**
      * Gracefully disconnect clients
      */
+    //UCID gb373
+    //Date 6/30/2025
+    // Summary: Shuts down the server by disconnecting all clients and removing rooms.
     private void shutdown() {
         try {
             // chose removeIf over forEach to avoid potential
@@ -50,6 +56,9 @@ public enum Server {
         }
     }
 
+    //UCID gb373
+    //Date 6/30/2025
+    // SUmmary: Starts the server on the specified port and listens for incoming client connections.
     private void start(int port) {
         this.port = port;
         // server listening
@@ -85,6 +94,11 @@ public enum Server {
      * 
      * @param serverThread
      */
+    //UCID gb373
+    //Date 6/30/2025
+    // Summary: Callback method that is invoked when a ServerThread is initialized.
+    // It generates a unique client ID, sets it for the ServerThread, and adds the
+    // client to the lobby room.
     private void onServerThreadInitialized(ServerThread serverThread) {
         // Generate Server controlled clientId
         nextClientId = Math.max(++nextClientId, 1);
@@ -108,6 +122,9 @@ public enum Server {
      * @return true if it was created and false if it wasn't
      * @throws DuplicateRoomException
      */
+    //UCID gb373
+    //Date 6/30/2025
+    // Summary: Creates a new room with the specified name if it doesn't already exist.
     protected void createRoom(String name) throws DuplicateRoomException {
         final String nameCheck = name.toLowerCase();
         if (rooms.containsKey(nameCheck)) {
@@ -126,6 +143,10 @@ public enum Server {
      * @throws RoomNotFoundException
      * 
      */
+    //UCID gb373
+    //Date 6/30/2025
+    // Summary: Moves a client to the specified room, removing them from their current
+    // room if they are already in one.
     protected void joinRoom(String name, ServerThread client) throws RoomNotFoundException {
         final String nameCheck = name.toLowerCase();
         if (!rooms.containsKey(nameCheck)) {
@@ -140,6 +161,9 @@ public enum Server {
         next.addClient(client);
     }
 
+    //UCID gb373
+    //Date 6/30/2025
+    // Summary: Removes a room from the collection of rooms.
     protected void removeRoom(Room room) {
         rooms.remove(room.getName().toLowerCase());
         info(String.format("Removed room %s", room.getName()));

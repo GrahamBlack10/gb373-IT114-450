@@ -115,6 +115,10 @@ public class Room implements AutoCloseable {
      * @param sender  ServerThread (client) sending the message or null if it's a
      *                server-generated message
      */
+    // UCID gb373
+    // Date 6/30/2025
+    // Summary: Sends a message to all clients in the room, handling disconnections
+    // and ensuring thread safety.
     protected synchronized void relay(ServerThread sender, String message) {
         if (!isRunning) { // block action if Room isn't running
             return;

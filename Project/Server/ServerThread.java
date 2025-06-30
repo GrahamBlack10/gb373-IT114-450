@@ -144,6 +144,9 @@ public class ServerThread extends BaseServerThread {
             case DISCONNECT:
                 currentRoom.handleDisconnect(this);
                 break;
+                // UCID gb373
+                // Date 6/30/2025
+                // Summary: Handles the case where a client sends a message to the server.
             case MESSAGE:
                 currentRoom.handleMessage(this, incoming.getMessage());
                 break;
