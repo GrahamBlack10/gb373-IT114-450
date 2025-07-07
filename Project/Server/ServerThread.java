@@ -10,6 +10,8 @@ import Project.Common.Constants;
 import Project.Common.LoggerUtil;
 import Project.Common.Payload;
 import Project.Common.PayloadType;
+import Project.Common.Phase;
+import Project.Common.ReadyPayload;
 import Project.Common.RoomAction;
 import Project.Common.RoomResultPayload;
 import Project.Common.TextFX;
@@ -53,6 +55,61 @@ public class ServerThread extends BaseServerThread {
     }
 
     // Start Send*() Methods
+    public boolean sendResetTurnStatus() {
+        ReadyPayload rp = new ReadyPayload();
+        rp.setPayloadType(PayloadType.RESET_TURN);
+        return sendToClient(rp);
+    }
+
+    public boolean sendTurnStatus(long clientId, boolean didTakeTurn) {
+        return sendTurnStatus(clientId, didTakeTurn, false);
+    }
+
+    public boolean sendTurnStatus(long clientId, boolean didTakeTurn, boolean quiet) {
+        // NOTE for now using ReadyPayload as it has the necessary properties
+        // An actual turn may include other data for your project
+        ReadyPayload rp = new ReadyPayload();
+        rp.setPayloadType(quiet ? PayloadType.SYNC_TURN : PayloadType.TURN);
+        rp.setClientId(clientId);
+        rp.setReady(didTakeTurn);
+        return sendToClient(rp);
+    }
+
+    public boolean sendCurrentPhase(Phase phase) {
+        Payload p = new Payload();
+        p.setPayloadType(PayloadType.PHASE);
+        p.setMessage(phase.name());
+        return sendToClient(p);
+    }
+
+    public boolean sendResetReady() {
+        ReadyPayload rp = new ReadyPayload();
+        rp.setPayloadType(PayloadType.RESET_READY);
+        return sendToClient(rp);
+    }
+
+    public boolean sendReadyStatus(long clientId, boolean isReady) {
+        return sendReadyStatus(clientId, isReady, false);
+    }
+
+    /**
+     * Sync ready status of client id
+     * 
+     * @param clientId who
+     * @param isReady  ready or not
+     * @param quiet    silently mark ready
+     * @return
+     */
+    public boolean sendReadyStatus(long clientId, boolean isReady, boolean quiet) {
+        ReadyPayload rp = new ReadyPayload();
+        rp.setClientId(clientId);
+        rp.setReady(isReady);
+        if (quiet) {
+            rp.setPayloadType(PayloadType.SYNC_READY);
+        }
+        return sendToClient(rp);
+    }
+
     public boolean sendRooms(List<String> rooms) {
         RoomResultPayload rrp = new RoomResultPayload();
         rrp.setRooms(rooms);
@@ -172,10 +229,45 @@ public class ServerThread extends BaseServerThread {
             case ROOM_LIST:
                 currentRoom.handleListRooms(this, incoming.getMessage());
                 break;
+            case READY:
+                // no data needed as the intent will be used as the trigger
+                try {
+                    // cast to GameRoom as the subclass will handle all Game logic
+                    ((GameRoom) currentRoom).handleReady(this);
+                } catch (Exception e) {
+                    sendMessage(Constants.DEFAULT_CLIENT_ID, "You must be in a GameRoom to do the ready check");
+                }
+                break;
+            case TURN:
+                // no data needed as the intent will be used as the trigger
+                try {
+                    // cast to GameRoom as the subclass will handle all Game logic
+                    ((GameRoom) currentRoom).handleTurnAction(this, incoming.getMessage());
+                } catch (Exception e) {
+                    sendMessage(Constants.DEFAULT_CLIENT_ID, "You must be in a GameRoom to do a turn");
+                }
+                break;
             default:
                 LoggerUtil.INSTANCE.warning(TextFX.colorize("Unknown payload type received", Color.RED));
                 break;
         }
+    }
+
+    // limited user data exposer
+    protected boolean isReady() {
+        return this.user.isReady();
+    }
+
+    protected void setReady(boolean isReady) {
+        this.user.setReady(isReady);
+    }
+
+    protected boolean didTakeTurn() {
+        return this.user.didTakeTurn();
+    }
+
+    protected void setTookTurn(boolean tookTurn) {
+        this.user.setTookTurn(tookTurn);
     }
 
     @Override
