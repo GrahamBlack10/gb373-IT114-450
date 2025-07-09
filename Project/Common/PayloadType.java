@@ -24,4 +24,7 @@ public enum PayloadType {
        SYNC_TURN, // quiet version of TURN, used to sync existing turn status of clients in a
                   // GameRoom
        RESET_TURN, // trigger to tell client to reset their local list turn status
+       // UCID: gb373 Date: 07/09/2025 Summary: Added POINTS and POINTS_UPDATE to handle points data transfer.
+       POINTS, // Used to sync a player's points
+       POINTS_UPDATE, // Used to update a player's points
 }

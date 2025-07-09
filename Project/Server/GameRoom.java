@@ -31,12 +31,20 @@ public class GameRoom extends BaseGameRoom {
     }
 
     /** {@inheritDoc} */
+    // UCID: gb373
+    // Date: 07/09/2025
+    // Summary: Handles the addition of a new client to the GameRoom.
+    // onClientRemoved is called when a client disconnects or leaves the room.
+    // onClientAdded is called when a new client joins the room.
     @Override
     protected void onClientAdded(ServerThread sp) {
         // sync GameRoom state to new client
         syncCurrentPhase(sp);
         syncReadyStatus(sp);
         syncTurnStatus(sp);
+
+        // sync points so the new client has up-to-date scores
+        sendPointsStatusToClient(sp);
     }
 
     /** {@inheritDoc} */
@@ -58,7 +66,6 @@ public class GameRoom extends BaseGameRoom {
     }
 
     // timer handlers
-
 
     private void resetRoundTimer() {
         if (roundTimer != null) {
@@ -83,6 +90,10 @@ public class GameRoom extends BaseGameRoom {
     // lifecycle methods
 
     /** {@inheritDoc} */
+    // Ucid: gb373
+    // Date: 07/09/2025
+    // Summary: Handles the start of a session, initializing the game state and
+    // notifying players.
     @Override
     protected void onSessionStart() {
         LoggerUtil.INSTANCE.info("onSessionStart() start");
@@ -95,17 +106,24 @@ public class GameRoom extends BaseGameRoom {
     }
 
     /** {@inheritDoc} */
+    // Ucid: gb373
+    // Date: 07/09/2025
+    // Summary: Handles the start of a round, resetting timers and notifying players.
+    // This method is called at the start of each round.
     @Override
     protected void onRoundStart() {
         LoggerUtil.INSTANCE.info("onRoundStart() start");
+
         resetRoundTimer();
         resetTurnStatus();
+        resetPlayerChoices();
+        changePhase(Phase.CHOOSING);
+        startRoundTimer(); 
+
         round++;
         relay(null, String.format("Round %d has started", round));
-        // startRoundTimer(); Round timers aren't needed for turns
-        // if you do decide to use it, ensure it's reasonable and based on the number of
-        // players
         LoggerUtil.INSTANCE.info("onRoundStart() end");
+
         onTurnStart();
     }
 
@@ -196,6 +214,34 @@ public class GameRoom extends BaseGameRoom {
         });
     }
 
+    private void resetPlayerChoices() {
+        clientsInRoom.values().forEach(player -> player.setChoice(null));
+    }
+
+    private void startRoundTimer() {
+        roundTimer = new TimedEvent(30, this::onRoundEnd); // Adjust time as needed
+        roundTimer.setTickCallback(time -> System.out.println("Round Time: " + time));
+    }
+    private void sendPointsStatusToAll() {
+        clientsInRoom.values().forEach(client -> {
+            int points = client.getPoints(); // get points from each client
+            boolean failedToSend = !client.sendPoints(client.getClientId(), points);
+            if (failedToSend) {
+                removeClient(client);
+            }
+        });
+    }
+
+    private void sendPointsStatusToClient(ServerThread client) {
+        clientsInRoom.values().forEach(otherClient -> {
+            int points = otherClient.getPoints();
+            boolean failedToSend = !client.sendPoints(otherClient.getClientId(), points);
+            if (failedToSend) {
+                removeClient(client);
+            }
+        });
+    }
+
     private void syncTurnStatus(ServerThread incomingClient) {
         clientsInRoom.values().forEach(serverUser -> {
             if (serverUser.getClientId() != incomingClient.getClientId()) {
@@ -282,7 +328,6 @@ public class GameRoom extends BaseGameRoom {
         return turnOrder.indexOf(getCurrentPlayer()) == (turnOrder.size() - 1);
     }
 
-
     // start check methods
     private void checkCurrentPlayer(long clientId) throws NotPlayersTurnException {
         if (currentTurnClientId != clientId) {
@@ -302,12 +347,12 @@ public class GameRoom extends BaseGameRoom {
      *                    additional actions or information)
      */
     protected void handleTurnAction(ServerThread currentUser, String exampleText) {
-        // check if the client is in the room
         try {
             checkPlayerInRoom(currentUser);
             checkCurrentPhase(currentUser, Phase.IN_PROGRESS);
             checkCurrentPlayer(currentUser.getClientId());
             checkIsReady(currentUser);
+
             if (currentUser.didTakeTurn()) {
                 currentUser.sendMessage(Constants.DEFAULT_CLIENT_ID, "You have already taken your turn this round");
                 return;
@@ -315,13 +360,16 @@ public class GameRoom extends BaseGameRoom {
             currentUser.setTookTurn(true);
 
             sendTurnStatus(currentUser, currentUser.didTakeTurn());
+
+            // Send all players' points to all clients to keep in sync
+            sendPointsStatusToAll();
+
             // finished processing the turn
             onTurnEnd();
         } catch (NotPlayersTurnException e) {
             currentUser.sendMessage(Constants.DEFAULT_CLIENT_ID, "It's not your turn");
             LoggerUtil.INSTANCE.severe("handleTurnAction exception", e);
         } catch (NotReadyException e) {
-            // The check method already informs the currentUser
             LoggerUtil.INSTANCE.severe("handleTurnAction exception", e);
         } catch (PlayerNotFoundException e) {
             currentUser.sendMessage(Constants.DEFAULT_CLIENT_ID, "You must be in a GameRoom to do the ready check");

@@ -11,6 +11,7 @@ import Project.Common.LoggerUtil;
 import Project.Common.Payload;
 import Project.Common.PayloadType;
 import Project.Common.Phase;
+import Project.Common.PointsPayload;
 import Project.Common.ReadyPayload;
 import Project.Common.RoomAction;
 import Project.Common.RoomResultPayload;
@@ -125,6 +126,14 @@ public class ServerThread extends BaseServerThread {
 
     protected boolean sendResetUserList() {
         return sendClientInfo(Constants.DEFAULT_CLIENT_ID, null, RoomAction.JOIN);
+    }
+
+    public boolean sendPoints(long clientId, int points) {
+        PointsPayload pp = new PointsPayload();
+        pp.setPayloadType(PayloadType.POINTS);
+        pp.setClientId(clientId);
+        pp.setPoints(points);
+        return sendToClient(pp);
     }
 
     /**
@@ -275,4 +284,19 @@ public class ServerThread extends BaseServerThread {
         // once receiving the desired client name the object is ready
         onInitializationComplete.accept(this);
     }
+
+    public int getPoints() {
+        return user.getPoints();
+    }
+
+    private String choice; // Player's current choice (e.g., "r", "p", "s")
+
+    public String getChoice() {
+        return choice;
+    }
+
+    public void setChoice(String choice) {
+        this.choice = choice;
+    }
+
 }

@@ -430,6 +430,9 @@ public enum Client {
                 // note no data necessary as this is just a trigger
                 processResetTurn();
                 break;
+            case PayloadType.POINTS_UPDATE:
+                processPoints(payload);
+                break;
             default:
                 LoggerUtil.INSTANCE.warning(TextFX.colorize("Unhandled payload type", Color.YELLOW));
                 break;
@@ -591,6 +594,31 @@ public enum Client {
     private void processReverse(Payload payload) {
         LoggerUtil.INSTANCE.info(TextFX.colorize(payload.getMessage(), Color.PURPLE));
     }
+
+    private void processPoints(Payload payload) {
+        if (!(payload instanceof Project.Common.PointsPayload)) {
+            error("Invalid payload subclass for processPoints");
+            return;
+        }
+
+        Project.Common.PointsPayload pp = (Project.Common.PointsPayload) payload;
+
+        User target = knownClients.get(pp.getClientId());
+        if (target != null) {
+            target.setPoints(pp.getPoints()); // Assuming your User class has a points field and setter
+            System.out.println(TextFX.colorize(
+                    String.format("%s now has %d point%s",
+                            target.getDisplayName(), pp.getPoints(), pp.getPoints() == 1 ? "" : "s"),
+                    Color.CYAN));
+        } else {
+            LoggerUtil.INSTANCE.warning(
+                    TextFX.colorize(String.format("Points received for unknown user %d", pp.getClientId()), Color.RED));
+        }
+
+        // Debug output
+        LoggerUtil.INSTANCE.info(pp.toString());
+    }
+
     // End process*() methods
 
     /**
@@ -663,4 +691,5 @@ public enum Client {
             e.printStackTrace();
         }
     }
+
 }
