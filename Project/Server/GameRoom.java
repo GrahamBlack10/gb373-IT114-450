@@ -313,7 +313,6 @@ public class GameRoom extends BaseGameRoom {
                 return;
             }
             currentUser.setTookTurn(true);
-            // TODO handle example text possibly or other turn related intention from client
 
             sendTurnStatus(currentUser, currentUser.didTakeTurn());
             // finished processing the turn
