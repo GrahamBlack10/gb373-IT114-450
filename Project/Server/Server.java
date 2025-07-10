@@ -3,17 +3,28 @@ package Project.Server;
 import java.io.IOException;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.stream.Collectors;
 
-import Project.Common.TextFX.Color;
+import Project.Common.LoggerUtil;
 import Project.Common.TextFX;
+import Project.Common.TextFX.Color;
 import Project.Exceptions.DuplicateRoomException;
 import Project.Exceptions.RoomNotFoundException;
-
 
 public enum Server {
     INSTANCE; // Singleton instance
 
+    {
+        // statically initialize the server-side LoggerUtil
+        LoggerUtil.LoggerConfig config = new LoggerUtil.LoggerConfig();
+        config.setFileSizeLimit(2048 * 1024); // 2MB
+        config.setFileCount(1);
+        config.setLogLocation("server.log");
+        // Set the logger configuration
+        LoggerUtil.INSTANCE.setConfig(config);
+    }
     private int port = 3000;
     // connected clients
     // Use ConcurrentHashMap for thread-safe client management
@@ -23,12 +34,9 @@ public enum Server {
     private long nextClientId = 0;
 
     private void info(String message) {
-        System.out.println(TextFX.colorize(String.format("Server: %s", message), Color.YELLOW));
+        LoggerUtil.INSTANCE.info(TextFX.colorize(String.format("Server: %s", message), Color.YELLOW));
     }
 
-    //UCID gb373
-    //Date 6/30/2025
-    // Summary: Private constructor sets a shutdown hook for graceful JVM shutdown cleanup.
     private Server() {
         Runtime.getRuntime().addShutdownHook(new Thread(() -> {
             info("JVM is shutting down. Perform cleanup tasks.");
@@ -39,9 +47,6 @@ public enum Server {
     /**
      * Gracefully disconnect clients
      */
-    //UCID gb373
-    //Date 6/30/2025
-    // Summary: Shuts down the server by disconnecting all clients and removing rooms.
     private void shutdown() {
         try {
             // chose removeIf over forEach to avoid potential
@@ -56,9 +61,6 @@ public enum Server {
         }
     }
 
-    //UCID gb373
-    //Date 6/30/2025
-    // SUmmary: Starts the server on the specified port and listens for incoming client connections.
     private void start(int port) {
         this.port = port;
         // server listening
@@ -79,9 +81,9 @@ public enum Server {
                 // Note: We don't yet add the ServerThread reference to our connectedClients map
             }
         } catch (DuplicateRoomException e) {
-            System.err.println(TextFX.colorize("Lobby already exists (this shouldn't happen)", Color.RED));
+            LoggerUtil.INSTANCE.severe(TextFX.colorize("Lobby already exists (this shouldn't happen)", Color.RED));
         } catch (IOException e) {
-            System.err.println(TextFX.colorize("Error accepting connection", Color.RED));
+            LoggerUtil.INSTANCE.severe(TextFX.colorize("Error accepting connection", Color.RED));
             e.printStackTrace();
         } finally {
             info("Closing server socket");
@@ -94,11 +96,6 @@ public enum Server {
      * 
      * @param serverThread
      */
-    //UCID gb373
-    //Date 6/30/2025
-    // Summary: Callback method that is invoked when a ServerThread is initialized.
-    // It generates a unique client ID, sets it for the ServerThread, and adds the
-    // client to the lobby room.
     private void onServerThreadInitialized(ServerThread serverThread) {
         // Generate Server controlled clientId
         nextClientId = Math.max(++nextClientId, 1);
@@ -122,15 +119,12 @@ public enum Server {
      * @return true if it was created and false if it wasn't
      * @throws DuplicateRoomException
      */
-    //UCID gb373
-    //Date 6/30/2025
-    // Summary: Creates a new room with the specified name if it doesn't already exist.
     protected void createRoom(String name) throws DuplicateRoomException {
         final String nameCheck = name.toLowerCase();
         if (rooms.containsKey(nameCheck)) {
             throw new DuplicateRoomException(String.format("Room %s already exists", name));
         }
-        Room room = new Room(name);
+        Room room = Room.LOBBY.equalsIgnoreCase(nameCheck) ? new Room(name) : new GameRoom(name);
         rooms.put(nameCheck, room);
         info(String.format("Created new Room %s", name));
     }
@@ -143,10 +137,6 @@ public enum Server {
      * @throws RoomNotFoundException
      * 
      */
-    //UCID gb373
-    //Date 6/30/2025
-    // Summary: Moves a client to the specified room, removing them from their current
-    // room if they are already in one.
     protected void joinRoom(String name, ServerThread client) throws RoomNotFoundException {
         final String nameCheck = name.toLowerCase();
         if (!rooms.containsKey(nameCheck)) {
@@ -161,9 +151,22 @@ public enum Server {
         next.addClient(client);
     }
 
-    //UCID gb373
-    //Date 6/30/2025
-    // Summary: Removes a room from the collection of rooms.
+    /**
+     * Lists all rooms that partially match the given String
+     * 
+     * @param roomQuery
+     * @return
+     */
+    protected List<String> listRooms(String roomQuery) {
+        final String nameCheck = roomQuery.toLowerCase();
+        return rooms.values().stream()
+                .filter(room -> room.getName().toLowerCase().contains(nameCheck))// find partially matched rooms
+                .map(room -> room.getName())// map room to String (name)
+                .limit(10) // limit to 10 results
+                .sorted() // sort the results alphabetically
+                .collect(Collectors.toList()); // return a mutable list
+    }
+
     protected void removeRoom(Room room) {
         rooms.remove(room.getName().toLowerCase());
         info(String.format("Removed room %s", room.getName()));
@@ -211,7 +214,7 @@ public enum Server {
     }
 
     public static void main(String[] args) {
-        System.out.println("Server Starting");
+        LoggerUtil.INSTANCE.info("Server Starting");
         Server server = Server.INSTANCE;
         int port = 3000;
         try {
@@ -221,7 +224,7 @@ public enum Server {
             // will default to the defined value prior to the try/catch
         }
         server.start(port);
-        System.out.println("Server Stopped");
+        LoggerUtil.INSTANCE.warning("Server Stopped");
     }
 
 }

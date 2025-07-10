@@ -3,6 +3,11 @@ package Project.Common;
 import java.io.Serializable;
 
 public class Payload implements Serializable {
+    //Ucid: gb373
+    //Date: 07/09/2025
+    //Summary: Base class for payloads used in client-server communication.
+    private static final long serialVersionUID = 1L;
+
     private PayloadType payloadType;
     private long clientId;
     private String message;
@@ -51,6 +56,7 @@ public class Payload implements Serializable {
 
     @Override
     public String toString() {
-        return String.format("Payload[%s] Client Id [%s] Message: [%s]", getPayloadType(), getClientId(), getMessage());
+        return String.format("Payload[%s] Client Id [%d] Message: [%s]",
+                getPayloadType(), getClientId(), getMessage());
     }
 }
