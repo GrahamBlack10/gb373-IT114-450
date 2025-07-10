@@ -75,7 +75,7 @@ public class GameRoom extends BaseGameRoom {
     }
 
     private void startTurnTimer() {
-        turnTimer = new TimedEvent(30, () -> onTurnEnd());
+        turnTimer = new TimedEvent(20, () -> onTurnEnd());
         turnTimer.setTickCallback((time) -> System.out.println("Turn Time: " + time));
     }
 
@@ -108,7 +108,8 @@ public class GameRoom extends BaseGameRoom {
     /** {@inheritDoc} */
     // Ucid: gb373
     // Date: 07/09/2025
-    // Summary: Handles the start of a round, resetting timers and notifying players.
+    // Summary: Handles the start of a round, resetting timers and notifying
+    // players.
     // This method is called at the start of each round.
     @Override
     protected void onRoundStart() {
@@ -117,8 +118,8 @@ public class GameRoom extends BaseGameRoom {
         resetRoundTimer();
         resetTurnStatus();
         resetPlayerChoices();
-        changePhase(Phase.CHOOSING);
-        startRoundTimer(); 
+        changePhase(Phase.IN_PROGRESS);
+        startRoundTimer();
 
         round++;
         relay(null, String.format("Round %d has started", round));
@@ -168,30 +169,136 @@ public class GameRoom extends BaseGameRoom {
     // Note: logic between Round Start and Round End is typically handled via timers
     // and user interaction
     /** {@inheritDoc} */
+    // Ucid: gb373
+    // Date: 07/10/2025
+    // Summary: Handles the end of a round, resetting game state and notifying
+    // players.
     @Override
     protected void onRoundEnd() {
         LoggerUtil.INSTANCE.info("onRoundEnd() start");
-        resetRoundTimer(); // reset timer if round ended without the time expiring
 
-        LoggerUtil.INSTANCE.info("onRoundEnd() end");
-        if (round >= 3) {
+        resetRoundTimer();
+
+        for (ServerThread player : clientsInRoom.values()) {
+            if (!player.isEliminated() && player.getChoice() == null) {
+                player.setEliminated(true);
+            }
+        }
+
+        List<ServerThread> activePlayers = clientsInRoom.values().stream()
+                .filter(p -> !p.isEliminated())
+                .collect(Collectors.toList());
+
+        if (activePlayers.size() < 2) {
+            onSessionEnd();
+            LoggerUtil.INSTANCE.info("onRoundEnd() end");
+            return;
+        }
+
+        List<ServerThread> losers = new ArrayList<>();
+
+        for (int i = 0; i < activePlayers.size(); i++) {
+            ServerThread attacker = activePlayers.get(i);
+            ServerThread defender = activePlayers.get((i + 1) % activePlayers.size());
+
+            String attackerChoice = attacker.getChoice();
+            String defenderChoice = defender.getChoice();
+
+            if (attackerChoice == null || defenderChoice == null)
+                continue;
+
+            boolean attackerWins = (attackerChoice.equals("r") && defenderChoice.equals("s")) ||
+                    (attackerChoice.equals("p") && defenderChoice.equals("r")) ||
+                    (attackerChoice.equals("s") && defenderChoice.equals("p"));
+
+            if (attackerWins) {
+                attacker.setPoints(attacker.getPoints() + 1);
+                relay(null, attacker.getDisplayName() + " (" + attackerChoice + ") beat " +
+                        defender.getDisplayName() + " (" + defenderChoice + ")");
+                losers.add(defender);
+            } else if (!attackerChoice.equals(defenderChoice)) {
+                relay(null, attacker.getDisplayName() + " (" + attackerChoice + ") lost to " +
+                        defender.getDisplayName() + " (" + defenderChoice + ")");
+            } else {
+                relay(null, attacker.getDisplayName() + " (" + attackerChoice + ") tied with " +
+                        defender.getDisplayName() + " (" + defenderChoice + ")");
+            }
+        }
+
+        for (ServerThread loser : losers) {
+            loser.setEliminated(true);
+        }
+
+        sendPointsStatusToAll();
+
+        long survivors = clientsInRoom.values().stream()
+                .filter(p -> !p.isEliminated())
+                .count();
+
+        if (survivors == 1) {
+            relay(null, "Game Over! The Winner is " +
+                    clientsInRoom.values().stream().filter(p -> !p.isEliminated()).findFirst().get().getDisplayName());
+            onSessionEnd();
+        } else if (survivors == 0) {
+            relay(null, "Game Over! It's a tie!");
             onSessionEnd();
         } else {
             onRoundStart();
         }
+
+        LoggerUtil.INSTANCE.info("onRoundEnd() end");
     }
 
     /** {@inheritDoc} */
+    // Ucid: gb373
+    // Date: 07/10/2025
+    // Summary: Handles the end of the session, resetting game state and notifying
+    // players.
+    // This method is called when the game ends, either due to a single winner or a
+    // tie.
     @Override
     protected void onSessionEnd() {
         LoggerUtil.INSTANCE.info("onSessionEnd() start");
+
+        List<ServerThread> remainingPlayers = clientsInRoom.values().stream()
+                .filter(p -> !p.isEliminated())
+                .collect(Collectors.toList());
+
+        if (remainingPlayers.size() == 1) {
+            relay(null, "Game Over! Winner is " + remainingPlayers.get(0).getDisplayName());
+        } else {
+            relay(null, "Game Over! It's a tie!");
+        }
+
+        List<ServerThread> scoreboard = clientsInRoom.values().stream()
+                .sorted((a, b) -> Integer.compare(b.getPoints(), a.getPoints()))
+                .collect(Collectors.toList());
+
+        for (ServerThread player : scoreboard) {
+            relay(null, player.getDisplayName() + ": " + player.getPoints() + " points");
+        }
+
+        clientsInRoom.values().forEach(player -> {
+            player.setPoints(0);
+            player.setEliminated(false);
+            player.setChoice(null);
+            player.setTookTurn(false);
+            player.setReady(false);
+            player.sendMessage(Constants.DEFAULT_CLIENT_ID,
+                    "Your game data has been reset. Please ready up for a new game.");
+        });
+
         turnOrder.clear();
         currentTurnClientId = Constants.DEFAULT_CLIENT_ID;
+
         resetReadyStatus();
         resetTurnStatus();
+
         changePhase(Phase.READY);
+
         LoggerUtil.INSTANCE.info("onSessionEnd() end");
     }
+
     // end lifecycle methods
 
     // send/sync data to ServerThread(s)
@@ -219,9 +326,10 @@ public class GameRoom extends BaseGameRoom {
     }
 
     private void startRoundTimer() {
-        roundTimer = new TimedEvent(30, this::onRoundEnd); // Adjust time as needed
+        roundTimer = new TimedEvent(200, this::onRoundEnd); // Adjust time as needed
         roundTimer.setTickCallback(time -> System.out.println("Round Time: " + time));
     }
+
     private void sendPointsStatusToAll() {
         clientsInRoom.values().forEach(client -> {
             int points = client.getPoints(); // get points from each client
@@ -273,6 +381,15 @@ public class GameRoom extends BaseGameRoom {
         turnOrder.clear();
         turnOrder = clientsInRoom.values().stream().filter(ServerThread::isReady).collect(Collectors.toList());
         Collections.shuffle(turnOrder);
+    }
+
+    private void broadcastMessageToRoom(String message) {
+        clientsInRoom.values().forEach(player -> {
+            boolean failedToSend = !player.sendMessage(Constants.DEFAULT_CLIENT_ID, message);
+            if (failedToSend) {
+                removeClient(player);
+            }
+        });
     }
 
     /**
@@ -346,8 +463,19 @@ public class GameRoom extends BaseGameRoom {
      * @param exampleText (arbitrary text from the client, can be used for
      *                    additional actions or information)
      */
-    protected void handleTurnAction(ServerThread currentUser, String exampleText) {
+    // Ucid: gb373
+    // Date: 07/10/2025
+    // Summary: Handles the turn action from the client, checking if the player is
+    // ready, if it's their turn, and if they have already taken a turn.
+    // If the player is ready and it's their turn, it processes the choice and
+    // updates the game state accordingly.
+    protected void handleTurnAction(ServerThread currentUser, String choice) {
         try {
+            if (currentUser.isEliminated()) {
+                currentUser.sendMessage(Constants.DEFAULT_CLIENT_ID, "You are eliminated and cannot take a turn.");
+                return;
+            }
+
             checkPlayerInRoom(currentUser);
             checkCurrentPhase(currentUser, Phase.IN_PROGRESS);
             checkCurrentPlayer(currentUser.getClientId());
@@ -357,15 +485,26 @@ public class GameRoom extends BaseGameRoom {
                 currentUser.sendMessage(Constants.DEFAULT_CLIENT_ID, "You have already taken your turn this round");
                 return;
             }
+
+            if (!choice.equalsIgnoreCase("r") && !choice.equalsIgnoreCase("p") && !choice.equalsIgnoreCase("s")) {
+                currentUser.sendMessage(Constants.DEFAULT_CLIENT_ID, "Invalid choice. Please pick 'r', 'p', or 's'.");
+                return;
+            }
+
+            //UCID: gb373
+            //Date: 07/10/2025
+            // Send/sync the choice to all clients in the room
+            currentUser.setChoice(choice.toLowerCase());
             currentUser.setTookTurn(true);
 
-            sendTurnStatus(currentUser, currentUser.didTakeTurn());
+            String message = String.format("%s picked their choice.", currentUser.getClientName());
+            broadcastMessageToRoom(message);
 
-            // Send all players' points to all clients to keep in sync
+            sendTurnStatus(currentUser, currentUser.didTakeTurn());
             sendPointsStatusToAll();
 
-            // finished processing the turn
             onTurnEnd();
+
         } catch (NotPlayersTurnException e) {
             currentUser.sendMessage(Constants.DEFAULT_CLIENT_ID, "It's not your turn");
             LoggerUtil.INSTANCE.severe("handleTurnAction exception", e);
@@ -376,7 +515,9 @@ public class GameRoom extends BaseGameRoom {
             LoggerUtil.INSTANCE.severe("handleTurnAction exception", e);
         } catch (PhaseMismatchException e) {
             currentUser.sendMessage(Constants.DEFAULT_CLIENT_ID,
-                    "You can only take a turn during the IN_PROGRESS phase");
+                    String.format(
+                            "You can only take a turn during the following phases: CHOOSING or IN_PROGRESS. Current phase: %s",
+                            currentPhase.name()));
             LoggerUtil.INSTANCE.severe("handleTurnAction exception", e);
         } catch (Exception e) {
             LoggerUtil.INSTANCE.severe("handleTurnAction exception", e);

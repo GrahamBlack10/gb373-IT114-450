@@ -269,12 +269,14 @@ public abstract class BaseGameRoom extends Room {
      * @param check
      * @throws Exception
      */
-    protected void checkCurrentPhase(ServerThread client, Phase check) throws Exception {
-        if (currentPhase != check) {
-            client.sendMessage(Constants.DEFAULT_CLIENT_ID,
-                    String.format("Current phase is %s, please try again later", currentPhase.name()));
-            throw new PhaseMismatchException("Invalid Phase");
+    protected void checkCurrentPhase(ServerThread client, Phase... allowedPhases) throws Exception {
+        for (Phase p : allowedPhases) {
+            if (currentPhase == p)
+                return;
         }
+        client.sendMessage(Constants.DEFAULT_CLIENT_ID,
+                String.format("Current phase is %s, please try again later", currentPhase.name()));
+        throw new PhaseMismatchException("Invalid Phase");
     }
 
     protected void checkIsReady(ServerThread client) throws NotReadyException {

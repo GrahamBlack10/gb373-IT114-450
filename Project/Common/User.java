@@ -80,4 +80,14 @@ public class User {
         this.points += delta;
     }
 
+     private boolean eliminated = false;
+
+    public boolean isEliminated() {
+        return eliminated;
+    }
+
+    public void setEliminated(boolean eliminated) {
+        this.eliminated = eliminated;
+    }
+    
 }

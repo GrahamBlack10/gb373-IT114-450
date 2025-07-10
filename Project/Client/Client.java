@@ -5,6 +5,7 @@ import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.net.Socket;
 import java.net.UnknownHostException;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Scanner;
 import java.util.concurrent.CompletableFuture;
@@ -162,13 +163,20 @@ public enum Client {
             } else if (text.equalsIgnoreCase(Command.LIST_USERS.command)) {
                 String message = TextFX.colorize("Known clients:\n", Color.CYAN);
                 LoggerUtil.INSTANCE.info(TextFX.colorize("Known clients:", Color.CYAN));
-                message += String.join("\n", knownClients.values().stream()
-                        .map(c -> String.format("%s %s %s %s",
-                                c.getDisplayName(),
-                                c.getClientId() == myUser.getClientId() ? " (you)" : "",
-                                c.isReady() ? "[x]" : "[ ]",
-                                c.didTakeTurn() ? "[T]" : "[ ]"))
-                        .toList());
+
+                List<String> userStrings = new ArrayList<>();
+                for (User c : knownClients.values()) {
+                    String entry = String.format("%s%s %s %s Points: %d %s",
+                            c.getDisplayName(),
+                            c.getClientId() == myUser.getClientId() ? " (you)" : "",
+                            c.isReady() ? "[x]" : "[ ]",
+                            c.didTakeTurn() ? "[T]" : "[ ]",
+                            c.getPoints(),
+                            c.isEliminated() ? "[E]" : "[ ]");
+                    userStrings.add(entry);
+                }
+
+                message += String.join("\n", userStrings);
                 LoggerUtil.INSTANCE.info(message);
                 wasCommand = true;
             } else if (Command.QUIT.command.equalsIgnoreCase(text)) {
@@ -217,7 +225,26 @@ public enum Client {
 
                 sendDoTurn(text);
                 wasCommand = true;
+                //UCID: gb373 Date: 07/10/2025 Summary: Added PICK command to allow players to make a choice.
+            } else if (text.startsWith(Command.PICK.command)) {
+                text = text.replace(Command.PICK.command, "").trim();
+
+                if (myUser.isEliminated()) {
+                    LoggerUtil.INSTANCE
+                            .warning(TextFX.colorize("You are eliminated and cannot pick.", Color.RED));
+                    return true;
+                }
+
+                if (!text.matches("[rps]")) {
+                    LoggerUtil.INSTANCE
+                            .warning(TextFX.colorize("Invalid pick. Use /pick r, /pick p, or /pick s", Color.RED));
+                    return true;
+                }
+
+                sendPickChoice(text); // custom method to send the pick to server
+                wasCommand = true;
             }
+
         }
         return wasCommand;
     }
@@ -244,6 +271,13 @@ public enum Client {
         // rp.setReady(true); // <- technically not needed as we'll use the payload type
         // as a trigger
         sendToServer(rp);
+    }
+
+    private void sendPickChoice(String choice) throws IOException {
+        Payload payload = new Payload();
+        payload.setPayloadType(PayloadType.TURN); // You are already using TURN for player actions
+        payload.setMessage(choice); // This will be 'r', 'p', or 's'
+        sendToServer(payload);
     }
 
     /**
@@ -430,9 +464,11 @@ public enum Client {
                 // note no data necessary as this is just a trigger
                 processResetTurn();
                 break;
+            case PayloadType.POINTS:
             case PayloadType.POINTS_UPDATE:
                 processPoints(payload);
                 break;
+
             default:
                 LoggerUtil.INSTANCE.warning(TextFX.colorize("Unhandled payload type", Color.YELLOW));
                 break;
@@ -446,8 +482,12 @@ public enum Client {
         System.out.println("Turn status reset for everyone");
     }
 
+    // UCID: gb373
+    // Date: 07/10/2025
+    // Summary: Processes the turn action from the client, checking if the player is
+    // ready, if it's their turn, and if they have already taken a turn.
     private void processTurn(Payload payload) {
-        // Note: For now assuming ReadyPayload (this may be changed later)
+        
         if (!(payload instanceof ReadyPayload)) {
             error("Invalid payload subclass for processTurn");
             return;

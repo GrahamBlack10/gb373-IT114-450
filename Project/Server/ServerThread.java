@@ -62,6 +62,11 @@ public class ServerThread extends BaseServerThread {
         return sendToClient(rp);
     }
 
+    //UCID: gb373
+    //Date: 07/10/2025
+    // Summary: Sends the turn status to the client, indicating whether they took their turn or not.
+    // If quiet is true, it uses SYNC_TURN to silently update the status without
+    // showing output on the client side.
     public boolean sendTurnStatus(long clientId, boolean didTakeTurn) {
         return sendTurnStatus(clientId, didTakeTurn, false);
     }
@@ -247,6 +252,8 @@ public class ServerThread extends BaseServerThread {
                     sendMessage(Constants.DEFAULT_CLIENT_ID, "You must be in a GameRoom to do the ready check");
                 }
                 break;
+                // UCID: gb373 Date: 07/10/2025
+                // Summary: TURNS and POINTS payloads added to handle game actions
             case TURN:
                 // no data needed as the intent will be used as the trigger
                 try {
@@ -299,4 +306,17 @@ public class ServerThread extends BaseServerThread {
         this.choice = choice;
     }
 
+    private boolean eliminated = false;
+
+    public boolean isEliminated() {
+        return eliminated;
+    }
+
+    public void setEliminated(boolean eliminated) {
+        this.eliminated = eliminated;
+    }
+
+    public void setPoints(int points) {
+        user.setPoints(points);
+    }
 }
