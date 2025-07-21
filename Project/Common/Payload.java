@@ -3,14 +3,15 @@ package Project.Common;
 import java.io.Serializable;
 
 public class Payload implements Serializable {
-    //Ucid: gb373
-    //Date: 07/09/2025
-    //Summary: Base class for payloads used in client-server communication.
+    // Ucid: gb373
+    // Date: 07/09/2025
+    // Summary: Base class for payloads used in client-server communication.
     private static final long serialVersionUID = 1L;
 
     private PayloadType payloadType;
     private long clientId;
     private String message;
+    private int numberValue;
 
     /**
      * @return the payloadType
@@ -52,6 +53,14 @@ public class Payload implements Serializable {
      */
     public void setMessage(String message) {
         this.message = message;
+    }
+
+    public int getNumberValue() {
+        return numberValue;
+    }
+
+    public void setNumberValue(int numberValue) {
+        this.numberValue = numberValue;
     }
 
     @Override
