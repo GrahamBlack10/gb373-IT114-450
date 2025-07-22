@@ -27,4 +27,6 @@ public enum PayloadType {
        // UCID: gb373 Date: 07/09/2025 Summary: Added POINTS and POINTS_UPDATE to handle points data transfer.
        POINTS, // Used to sync a player's points
        POINTS_UPDATE, // Used to update a player's points
+       TIME, // syncs current time of various timers
+       GAME_EVENT, // used to sync game events (e.g., game start, game end)
 }

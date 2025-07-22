@@ -5,21 +5,25 @@ public class PointsPayload extends Payload {
     private int points;
 
     public PointsPayload() {
-        // set payload type to POINTS_UPDATE or similar
-        this.setPayloadType(PayloadType.POINTS_UPDATE);
+        setPayloadType(PayloadType.POINTS);
     }
 
+    /**
+     * @return the points
+     */
     public int getPoints() {
         return points;
     }
 
+    /**
+     * @param points the points to set
+     */
     public void setPoints(int points) {
         this.points = points;
     }
 
     @Override
     public String toString() {
-        return String.format("PointsPayload { points: %d}",
-                points);
+        return super.toString() + String.format(" points=%d", points);
     }
 }
