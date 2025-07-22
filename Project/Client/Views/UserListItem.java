@@ -103,4 +103,17 @@ public class UserListItem extends JPanel {
         }
         repaint();
     }
+
+
+    public int getPoints() {
+        try {
+            return Integer.parseInt(pointsPanel.getText());
+        } catch (NumberFormatException e) {
+            return 0; // Default to 0 if parsing fails
+        }
+    
+    }
+    public String getClientName() {
+        return displayName;
+    }
 }

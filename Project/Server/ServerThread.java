@@ -150,6 +150,9 @@ public class ServerThread extends BaseServerThread {
         return sendClientInfo(Constants.DEFAULT_CLIENT_ID, null, RoomAction.JOIN);
     }
 
+    // UCID: gb373
+    // Date: 07/22/2025
+    // Summary: Sends points to the client, which can be used for scoring or other purposes.
     public boolean sendPoints(long clientId, int points) {
         PointsPayload pp = new PointsPayload();
         pp.setPayloadType(PayloadType.POINTS);
@@ -265,6 +268,9 @@ public class ServerThread extends BaseServerThread {
                     sendMessage(Constants.DEFAULT_CLIENT_ID, "You must be in a GameRoom to do the ready check");
                 }
                 break;
+                // UCID: gb373
+                // Date: 07/09/2025
+                // Summary: Handles the player's turn action in the game.
             case TURN:
                 try {
                     ((GameRoom) currentRoom).handleTurnAction(this, incoming.getMessage());

@@ -167,12 +167,17 @@ public class UserListView extends JPanel
         }
     }
 
+    // UCID: gb373
+    // Date: 07/22/2025
+    // Summary: Updates the points for a user in the user list.
+    // This method is called when the server sends a points update.
     @Override
     public void onPointsUpdate(long clientId, int points) {
         if (clientId == Constants.DEFAULT_CLIENT_ID) {
             SwingUtilities.invokeLater(() -> {
                 try {
-                    userItemsMap.values().forEach(u -> u.setPoints(-1));// reset all
+                    userItemsMap.values().forEach(u -> u.setPoints(-1));
+                    sortUserList();
                 } catch (Exception e) {
                     LoggerUtil.INSTANCE.severe("Error resetting user items", e);
                 }
@@ -181,11 +186,53 @@ public class UserListView extends JPanel
             SwingUtilities.invokeLater(() -> {
                 try {
                     userItemsMap.get(clientId).setPoints(points);
+                    sortUserList();
                 } catch (Exception e) {
                     LoggerUtil.INSTANCE.severe("Error setting user item", e);
                 }
-
             });
+        }
+    }
+
+   
+    //UCID: gb373
+    // Date: 07/22/2025
+    // Summary: Sorts the user list based on points and names if there is a tie.
+    private void sortUserList() {
+        try {
+    
+            userListArea.removeAll();
+
+            List<UserListItem> sortedItems = userItemsMap.values().stream()
+                .sorted((a, b) -> {
+                    int cmp = Integer.compare(b.getPoints(), a.getPoints());
+                    if (cmp == 0) {
+                        return a.getClientName().compareToIgnoreCase(b.getClientName());
+                    }
+                    return cmp;
+                })
+                .toList();
+
+
+            GridBagConstraints gbc = new GridBagConstraints();
+            gbc.gridx = 0;
+            gbc.weightx = 1;
+            gbc.anchor = GridBagConstraints.NORTH;
+            gbc.fill = GridBagConstraints.BOTH;
+            gbc.insets = new Insets(0, 0, 5, 5);
+
+            int y = 0;
+            for (UserListItem item : sortedItems) {
+                gbc.gridy = y++;
+                userListArea.add(item, gbc);
+            }
+
+            userListArea.add(Box.createVerticalGlue(), lastConstraints);
+
+            userListArea.revalidate();
+            userListArea.repaint();
+        } catch (Exception e) {
+            LoggerUtil.INSTANCE.severe("Error sorting user list", e);
         }
     }
 

@@ -293,21 +293,22 @@ public enum Client {
             // UCID: gb373 Date: 07/10/2025 Summary: Added PICK command to allow players to
             // make a choice.
             else if (text.startsWith(Command.PICK.command)) {
-                text = text.replace(Command.PICK.command, "").trim();
+               
+                String choice = text.replace(Command.PICK.command, "").trim().toLowerCase();
 
                 if (myUser.isEliminated()) {
-                    LoggerUtil.INSTANCE
-                            .warning(TextFX.colorize("You are eliminated and cannot pick.", Color.RED));
+                    LoggerUtil.INSTANCE.warning(TextFX.colorize("You are eliminated and cannot pick.", Color.RED));
                     return true;
                 }
 
-                if (!text.matches("[rps]")) {
+               
+                if (!choice.matches("[rps]")) {
                     LoggerUtil.INSTANCE
                             .warning(TextFX.colorize("Invalid pick. Use /pick r, /pick p, or /pick s", Color.RED));
                     return true;
                 }
 
-                sendPickChoice(text); // custom method to send the pick to server
+                sendPickChoice(choice);
                 wasCommand = true;
             }
 
@@ -585,6 +586,10 @@ public enum Client {
         }
     }
 
+    // UCID: gb373
+    // Date: 07/22/2025
+    // Summary: Closes the server connection and cleans up resources. Sends points
+    // update to UI.
     // Start process*() methods
     private void processPoints(Payload payload) {
         if (!(payload instanceof PointsPayload)) {
