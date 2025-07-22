@@ -52,6 +52,7 @@ public class User {
         this.clientName = null;
         this.isReady = false;
         this.tookTurn = false;
+        this.points = 0;
     }
 
     /**
@@ -67,7 +68,6 @@ public class User {
     public void setTookTurn(boolean tookTurn) {
         this.tookTurn = tookTurn;
     }
-
     public int getPoints() {
         return points;
     }

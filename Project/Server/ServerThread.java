@@ -5,6 +5,8 @@ import java.util.List;
 import java.util.Objects;
 import java.util.function.Consumer;
 import Project.Common.TextFX.Color;
+import Project.Common.TimerPayload;
+import Project.Common.TimerType;
 import Project.Common.ConnectionPayload;
 import Project.Common.Constants;
 import Project.Common.LoggerUtil;
@@ -62,9 +64,10 @@ public class ServerThread extends BaseServerThread {
         return sendToClient(rp);
     }
 
-    //UCID: gb373
-    //Date: 07/10/2025
-    // Summary: Sends the turn status to the client, indicating whether they took their turn or not.
+    // UCID: gb373
+    // Date: 07/10/2025
+    // Summary: Sends the turn status to the client, indicating whether they took
+    // their turn or not.
     // If quiet is true, it uses SYNC_TURN to silently update the status without
     // showing output on the client side.
     public boolean sendTurnStatus(long clientId, boolean didTakeTurn) {
@@ -79,6 +82,20 @@ public class ServerThread extends BaseServerThread {
         rp.setClientId(clientId);
         rp.setReady(didTakeTurn);
         return sendToClient(rp);
+    }
+
+    public boolean sendGameEvent(String message) {
+        Payload payload = new Payload();
+        payload.setPayloadType(PayloadType.GAME_EVENT); // Make sure this enum exists in PayloadType
+        payload.setMessage(message);
+        return sendToClient(payload);
+    }
+
+    public boolean sendCurrentTime(TimerType timerType, int time) {
+        TimerPayload payload = new TimerPayload();
+        payload.setTimerType(timerType);
+        payload.setTime(time);
+        return sendToClient(payload);
     }
 
     public boolean sendCurrentPhase(Phase phase) {
@@ -133,6 +150,9 @@ public class ServerThread extends BaseServerThread {
         return sendClientInfo(Constants.DEFAULT_CLIENT_ID, null, RoomAction.JOIN);
     }
 
+    // UCID: gb373
+    // Date: 07/22/2025
+    // Summary: Sends points to the client, which can be used for scoring or other purposes.
     public boolean sendPoints(long clientId, int points) {
         PointsPayload pp = new PointsPayload();
         pp.setPayloadType(PayloadType.POINTS);
@@ -216,11 +236,9 @@ public class ServerThread extends BaseServerThread {
     // End Send*() Methods
     @Override
     protected void processPayload(Payload incoming) {
-
         switch (incoming.getPayloadType()) {
             case CLIENT_CONNECT:
                 setClientName(((ConnectionPayload) incoming).getClientName().trim());
-
                 break;
             case DISCONNECT:
                 currentRoom.handleDisconnect(this);
@@ -244,27 +262,61 @@ public class ServerThread extends BaseServerThread {
                 currentRoom.handleListRooms(this, incoming.getMessage());
                 break;
             case READY:
-                // no data needed as the intent will be used as the trigger
                 try {
-                    // cast to GameRoom as the subclass will handle all Game logic
                     ((GameRoom) currentRoom).handleReady(this);
                 } catch (Exception e) {
                     sendMessage(Constants.DEFAULT_CLIENT_ID, "You must be in a GameRoom to do the ready check");
                 }
                 break;
-                // UCID: gb373 Date: 07/10/2025
-                // Summary: TURNS and POINTS payloads added to handle game actions
+                // UCID: gb373
+                // Date: 07/09/2025
+                // Summary: Handles the player's turn action in the game.
             case TURN:
-                // no data needed as the intent will be used as the trigger
                 try {
-                    // cast to GameRoom as the subclass will handle all Game logic
                     ((GameRoom) currentRoom).handleTurnAction(this, incoming.getMessage());
                 } catch (Exception e) {
                     sendMessage(Constants.DEFAULT_CLIENT_ID, "You must be in a GameRoom to do a turn");
                 }
                 break;
+            case TIME:
+                TimerPayload timerPayload = (TimerPayload) incoming;
+                // Update UI timer display, e.g.:
+                System.out.println("Timer update: " + timerPayload.getTime() + " seconds remaining.");
+                break;
+            case POINTS:
+                PointsPayload pointsPayload = (PointsPayload) incoming;
+                // Update player points UI:
+                System.out.println(
+                        "Player " + pointsPayload.getClientId() + " has " + pointsPayload.getPoints() + " points.");
+                break;
+            case RESET_TURN:
+            case SYNC_TURN:
+                ReadyPayload turnPayload = (ReadyPayload) incoming;
+                // Update turn status in UI, e.g.:
+                System.out.println("Player " + turnPayload.getClientId() + " turn status: " + turnPayload.isReady());
+                break;
+            case RESET_READY:
+            case SYNC_READY:
+                ReadyPayload readyPayload = (ReadyPayload) incoming;
+                // Update ready status in UI, e.g.:
+                System.out.println("Player " + readyPayload.getClientId() + " ready status: " + readyPayload.isReady());
+                break;
+            case GAME_EVENT:
+                Payload gameEventPayload = (Payload) incoming;
+                // Handle game event, e.g.:
+                System.out.println("Game event: " + gameEventPayload.getMessage());
+                break;
+            case CLIENT_ID:
+                // This is the initial connection payload, so we can set the client ID
+                setClientId(incoming.getClientId());
+                // Send the client ID back to the client
+                sendClientId();
+                // Notify that initialization is complete
+                onInitialized();
+                break;
             default:
-                LoggerUtil.INSTANCE.warning(TextFX.colorize("Unknown payload type received", Color.RED));
+                LoggerUtil.INSTANCE.warning(
+                        TextFX.colorize("Unknown payload type received: " + incoming.getPayloadType(), Color.RED));
                 break;
         }
     }
@@ -319,4 +371,10 @@ public class ServerThread extends BaseServerThread {
     public void setPoints(int points) {
         user.setPoints(points);
     }
+
+    public void changePoints(int delta) {
+        int updatedPoints = getPoints() + delta;
+        setPoints(updatedPoints);
+    }
+
 }
