@@ -118,6 +118,9 @@ public class GameEventsView extends JPanel implements IPhaseEvent, IReadyEvent, 
         addText(String.format("%s is %s", displayName, isReady ? "ready" : "not ready"));
     }
 
+    // UCID: gb373
+    // Date: 07/23/2025
+    // Summary: Handles incoming messages from the server and displays them in the game panel.
     @Override
     public void onMessageReceive(long id, String message) {
         if (id == Constants.GAME_EVENT_CHANNEL) {// using -2 as an internal channel for GameEvents

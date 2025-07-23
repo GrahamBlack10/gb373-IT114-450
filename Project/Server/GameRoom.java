@@ -11,21 +11,28 @@ import Project.Exceptions.PlayerNotFoundException;
 public class GameRoom extends BaseGameRoom {
     private TimedEvent roundTimer = null;
     private int round = 0;
+    private String roomName;
 
     @Override
     protected void onTurnStart() {
-
-        sendGameEvent("A new turn has started!");
+        // Implement logic for when a player's turn starts, if needed.
+        // For now, just send a game event.
+        sendGameEvent("A player's turn has started.");
     }
 
     @Override
     protected void onTurnEnd() {
-
-        sendGameEvent("The turn has ended!");
+        // Implement logic for when a player's turn ends, if needed.
+        // For now, just send a game event.
+        sendGameEvent("A player's turn has ended.");
     }
 
     public GameRoom(String name) {
         super(name);
+    }
+
+    public String getRoomName() {
+        return roomName;
     }
 
     // UCID: gb373
@@ -35,10 +42,13 @@ public class GameRoom extends BaseGameRoom {
     // onClientAdded is called when a new client joins the room.
     @Override
     protected void onClientAdded(ServerThread sp) {
-        // sync GameRoom state to new client
+        // Sync only what's needed depending on phase to avoid UI inconsistencies
         syncCurrentPhase(sp);
         syncReadyStatus(sp);
-        syncTurnStatus(sp);
+        if (currentPhase != Phase.READY) {
+            syncTurnStatus(sp);
+            syncPlayerPoints(sp);
+        }
     }
 
     @Override
@@ -50,9 +60,6 @@ public class GameRoom extends BaseGameRoom {
         }
     }
 
-    // UCID: gb373
-    // Date: 07/09/2025
-    // Summary: Handles the session start and round start events.
     @Override
     protected void onSessionStart() {
         changePhase(Phase.IN_PROGRESS);
@@ -60,10 +67,6 @@ public class GameRoom extends BaseGameRoom {
         onRoundStart();
     }
 
-    // UCID: gb373
-    // Date: 07/09/2025
-    // Summary: Handles the start of a new round, resetting player choices and
-    // starting the round timer.
     @Override
     protected void onRoundStart() {
         resetRoundTimer();
@@ -73,13 +76,7 @@ public class GameRoom extends BaseGameRoom {
         sendGameEvent("Round " + round + " has started! Use /pick r/p/s");
 
         roundTimer = new TimedEvent(30, this::onRoundEnd);
-        roundTimer.setTickCallback(time -> {
-            TimerPayload payload = new TimerPayload();
-            payload.setPayloadType(PayloadType.TIME);
-            payload.setTimerType(TimerType.ROUND);
-            payload.setTime(time);
-            sendToAllClients(payload);
-        });
+        roundTimer.setTickCallback(time -> sendCurrentTime(TimerType.ROUND, time));
     }
 
     // UCID: gb373
@@ -93,7 +90,7 @@ public class GameRoom extends BaseGameRoom {
     protected void onRoundEnd() {
         resetRoundTimer();
 
-        // Eliminate players who didn't choose
+        // Eliminate players who didn't make a choice
         clientsInRoom.values().forEach(p -> {
             if (!p.isEliminated() && p.getChoice() == null) {
                 p.setEliminated(true);
@@ -119,33 +116,37 @@ public class GameRoom extends BaseGameRoom {
 
             if (winsAgainst(atkChoice, defChoice)) {
                 attacker.setPoints(attacker.getPoints() + 1);
+                sendPlayerPoints(attacker);
                 sendGameEvent(attacker.getDisplayName() + " (" + atkChoice + ") beat " +
                         defender.getDisplayName() + " (" + defChoice + ")");
                 toEliminate.add(defender);
             } else if (winsAgainst(defChoice, atkChoice)) {
                 defender.setPoints(defender.getPoints() + 1);
+                sendPlayerPoints(defender);
                 sendGameEvent(defender.getDisplayName() + " (" + defChoice + ") beat " +
                         attacker.getDisplayName() + " (" + atkChoice + ")");
-
             } else {
                 sendGameEvent(attacker.getDisplayName() + " (" + atkChoice + ") tied with " +
                         defender.getDisplayName() + " (" + defChoice + ")");
             }
         }
 
+        clientsInRoom.values().forEach(p -> {
+            if (!p.isEliminated() && p.getChoice() == null) {
+                p.setEliminated(true);
+                sendGameEvent(p.getDisplayName() + " was eliminated for not picking.");
+                p.sendEliminationStatus(p.getClientId(), true); // <-- Add this line
+            }
+        });
+
+        // After pairwise battles:
         for (ServerThread p : toEliminate) {
             if (!p.isEliminated()) {
                 p.setEliminated(true);
                 sendGameEvent(p.getDisplayName() + " was eliminated.");
+                broadcastEliminationStatus(p.getClientId(), true);
             }
         }
-
-        toEliminate.forEach(p -> {
-            if (!p.isEliminated()) {
-                p.setEliminated(true);
-                sendGameEvent(p.getDisplayName() + " was eliminated.");
-            }
-        });
 
         sendPointsStatusToAll();
 
@@ -181,6 +182,7 @@ public class GameRoom extends BaseGameRoom {
             player.setTookTurn(false);
             player.setEliminated(false);
             player.setReady(false);
+            player.sendEliminationStatus(player.getClientId(), false);
             player.sendMessage(Constants.DEFAULT_CLIENT_ID, "Game ended. Please /ready to start again.");
         });
 
@@ -193,8 +195,8 @@ public class GameRoom extends BaseGameRoom {
     protected void handleTurnAction(ServerThread player, String choice) {
         try {
             checkPlayerInRoom(player);
-            checkIsReady(player); 
-            checkCurrentPhase(player, Phase.IN_PROGRESS); 
+            checkIsReady(player);
+            checkCurrentPhase(player, Phase.IN_PROGRESS);
 
             if (player.isEliminated()) {
                 player.sendMessage(Constants.DEFAULT_CLIENT_ID, "You are eliminated.");
@@ -214,7 +216,9 @@ public class GameRoom extends BaseGameRoom {
 
             player.setChoice(choice);
             player.setTookTurn(true);
+            sendTurnStatus(player, true);
             sendGameEvent(player.getDisplayName() + " picked.");
+            clientsInRoom.values().forEach(p -> p.sendPendingStatus(player.getClientId(), false));
 
             long remaining = clientsInRoom.values().stream()
                     .filter(p -> !p.isEliminated() && p.getChoice() == null)
@@ -227,9 +231,7 @@ public class GameRoom extends BaseGameRoom {
         } catch (PlayerNotFoundException e) {
             player.sendMessage(Constants.DEFAULT_CLIENT_ID, "You must be in a GameRoom to play.");
             LoggerUtil.INSTANCE.severe("handleTurnAction exception", e);
-        } catch (NotReadyException e) {
-            LoggerUtil.INSTANCE.severe("handleTurnAction exception", e);
-        } catch (PhaseMismatchException e) {
+        } catch (NotReadyException | PhaseMismatchException e) {
             player.sendMessage(Constants.DEFAULT_CLIENT_ID, "You can only pick during the game.");
             LoggerUtil.INSTANCE.severe("handleTurnAction exception", e);
         } catch (Exception e) {
@@ -247,8 +249,12 @@ public class GameRoom extends BaseGameRoom {
         sendReadyStatus(player, true);
 
         boolean allReady = clientsInRoom.values().stream().allMatch(ServerThread::isReady);
-        if (allReady) {
+
+        // Ensure at least 2 players before starting the game
+        if (allReady && clientsInRoom.size() >= 2) {
             onSessionStart();
+        } else if (allReady) {
+            sendGameEvent("At least 2 players are required to start the game.");
         }
     }
 
@@ -256,21 +262,21 @@ public class GameRoom extends BaseGameRoom {
         clientsInRoom.values().forEach(p -> {
             p.setChoice(null);
             p.setTookTurn(false);
+            clientsInRoom.values().forEach(other -> other.sendPendingStatus(p.getClientId(), true));
         });
+
+        sendResetTurnStatus();
     }
 
     private void resetRoundTimer() {
         if (roundTimer != null) {
             roundTimer.cancel();
             roundTimer = null;
-            TimerPayload payload = new TimerPayload();
-            payload.setPayloadType(PayloadType.TIME);
-            payload.setTimerType(TimerType.ROUND);
-            payload.setTime(-1);
-            sendToAllClients(payload);
+            sendCurrentTime(TimerType.ROUND, -1);
         }
     }
 
+    @Override
     protected void sendGameEvent(String msg) {
         clientsInRoom.values().forEach(p -> p.sendGameEvent(msg));
     }
@@ -284,14 +290,43 @@ public class GameRoom extends BaseGameRoom {
                 p -> clientsInRoom.values().forEach(target -> target.sendPoints(p.getClientId(), p.getPoints())));
     }
 
+    private void sendPlayerPoints(ServerThread sp) {
+        clientsInRoom.values().forEach(p -> p.sendPoints(sp.getClientId(), sp.getPoints()));
+    }
+
+    private void syncPlayerPoints(ServerThread p) {
+        clientsInRoom.values().forEach(other -> {
+            if (other != p)
+                p.sendPoints(other.getClientId(), other.getPoints());
+        });
+    }
+
+    @Override
     protected void sendReadyStatus(ServerThread player, boolean isReady) {
         clientsInRoom.values().forEach(p -> p.sendReadyStatus(player.getClientId(), isReady));
+    }
+
+    private void sendTurnStatus(ServerThread client, boolean tookTurn) {
+        clientsInRoom.values().forEach(p -> p.sendTurnStatus(client.getClientId(), tookTurn));
+    }
+
+    private void sendResetTurnStatus() {
+        clientsInRoom.values().forEach(p -> p.sendResetTurnStatus());
     }
 
     private boolean winsAgainst(String a, String b) {
         return (a.equals("r") && b.equals("s")) ||
                 (a.equals("p") && b.equals("r")) ||
                 (a.equals("s") && b.equals("p"));
+    }
+
+    @Override
+    protected void sendCurrentTime(TimerType type, int time) {
+        TimerPayload payload = new TimerPayload();
+        payload.setPayloadType(PayloadType.TIME);
+        payload.setTimerType(type);
+        payload.setTime(time);
+        sendToAllClients(payload);
     }
 
     @Override
@@ -314,10 +349,8 @@ public class GameRoom extends BaseGameRoom {
         });
     }
 
-    private void syncPlayerPoints(ServerThread p) {
-        clientsInRoom.values().forEach(other -> {
-            if (other != p)
-                p.sendPoints(other.getClientId(), other.getPoints());
-        });
+    private void broadcastEliminationStatus(long clientId, boolean isEliminated) {
+        clientsInRoom.values().forEach(client -> client.sendEliminationStatus(clientId, isEliminated));
     }
+
 }

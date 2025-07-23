@@ -84,6 +84,9 @@ public class ServerThread extends BaseServerThread {
         return sendToClient(rp);
     }
 
+    // UCID: gb373
+    // Date: 07/23/2025
+    // Summary: Sends a game event message to the client, which can be used for various game-related notifications.
     public boolean sendGameEvent(String message) {
         Payload payload = new Payload();
         payload.setPayloadType(PayloadType.GAME_EVENT); // Make sure this enum exists in PayloadType
@@ -152,7 +155,8 @@ public class ServerThread extends BaseServerThread {
 
     // UCID: gb373
     // Date: 07/22/2025
-    // Summary: Sends points to the client, which can be used for scoring or other purposes.
+    // Summary: Sends points to the client, which can be used for scoring or other
+    // purposes.
     public boolean sendPoints(long clientId, int points) {
         PointsPayload pp = new PointsPayload();
         pp.setPayloadType(PayloadType.POINTS);
@@ -268,9 +272,9 @@ public class ServerThread extends BaseServerThread {
                     sendMessage(Constants.DEFAULT_CLIENT_ID, "You must be in a GameRoom to do the ready check");
                 }
                 break;
-                // UCID: gb373
-                // Date: 07/09/2025
-                // Summary: Handles the player's turn action in the game.
+            // UCID: gb373
+            // Date: 07/09/2025
+            // Summary: Handles the player's turn action in the game.
             case TURN:
                 try {
                     ((GameRoom) currentRoom).handleTurnAction(this, incoming.getMessage());
@@ -375,6 +379,29 @@ public class ServerThread extends BaseServerThread {
     public void changePoints(int delta) {
         int updatedPoints = getPoints() + delta;
         setPoints(updatedPoints);
+    }
+
+    // UCID: gb373
+    // Date: 07/23/2025
+    // Summary: Sends the pending pick status to the client, indicating whether the
+    // player is currently pending a pick action.
+    public boolean sendPendingStatus(long clientId, boolean isPending) {
+        Payload payload = new Payload();
+        payload.setPayloadType(PayloadType.PENDING_PICK);
+        payload.setClientId(clientId);
+        payload.setMessage(Boolean.toString(isPending));
+        return sendToClient(payload);
+    }
+
+    // UCID: gb373
+    // Date: 07/23/2025
+    // Summary: Sends the elimination status to the client, indicating whether the player has been eliminated.
+    public boolean sendEliminationStatus(long clientId, boolean isEliminated) {
+        Payload payload = new Payload();
+        payload.setPayloadType(PayloadType.ELIMINATED); // Define this enum
+        payload.setClientId(clientId);
+        payload.setMessage(Boolean.toString(isEliminated));
+        return sendToClient(payload);
     }
 
 }

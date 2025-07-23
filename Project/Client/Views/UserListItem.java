@@ -16,6 +16,9 @@ public class UserListItem extends JPanel {
     private final JPanel turnIndicator;
     private final JEditorPane pointsPanel;
     private final String displayName; // store original name for future features that require formatting changes
+    private int points = 0;
+    private final JPanel pendingIndicator;
+    private final JPanel eliminatedIndicator;
 
     /**
      * Constructor to create a UserListItem.
@@ -57,6 +60,25 @@ public class UserListItem extends JPanel {
         pointsPanel.setBackground(new Color(0, 0, 0, 0));
         rowPanel.add(pointsPanel);
 
+        pendingIndicator = new JPanel();
+        pendingIndicator.setPreferredSize(new Dimension(10, 10));
+        pendingIndicator.setMinimumSize(pendingIndicator.getPreferredSize());
+        pendingIndicator.setMaximumSize(pendingIndicator.getPreferredSize());
+        pendingIndicator.setOpaque(true);
+        pendingIndicator.setBackground(Color.ORANGE);
+        pendingIndicator.setVisible(false);
+        rowPanel.add(pendingIndicator);
+        rowPanel.add(Box.createHorizontalStrut(8));
+        // add eliminated indicator red square
+        eliminatedIndicator = new JPanel();
+        eliminatedIndicator.setPreferredSize(new Dimension(10, 10));
+        eliminatedIndicator.setMinimumSize(eliminatedIndicator.getPreferredSize());
+        eliminatedIndicator.setMaximumSize(eliminatedIndicator.getPreferredSize());
+        eliminatedIndicator.setOpaque(true);
+        eliminatedIndicator.setBackground(Color.RED);
+        eliminatedIndicator.setVisible(false);
+        rowPanel.add(eliminatedIndicator);
+
         add(rowPanel);
         setPoints(-1);
     }
@@ -92,8 +114,9 @@ public class UserListItem extends JPanel {
      * @param points the number of points, or <0 to hide
      */
     public void setPoints(int points) {
+        this.points = points;
         if (points < 0) {
-            pointsPanel.setText("0");
+            pointsPanel.setText("");
             pointsPanel.setVisible(false);
         } else {
             pointsPanel.setText(Integer.toString(points));
@@ -104,16 +127,31 @@ public class UserListItem extends JPanel {
         repaint();
     }
 
-
     public int getPoints() {
-        try {
-            return Integer.parseInt(pointsPanel.getText());
-        } catch (NumberFormatException e) {
-            return 0; // Default to 0 if parsing fails
-        }
-    
+        return points;
     }
+
     public String getClientName() {
         return displayName;
     }
+
+    public void setPendingPick(boolean isPending) {
+        // Only show pending if NOT eliminated
+        if (!eliminatedIndicator.isVisible()) {
+            pendingIndicator.setVisible(isPending);
+        } else {
+            pendingIndicator.setVisible(false);
+        }
+        pendingIndicator.repaint();
+    }
+
+    public void setEliminated(boolean isEliminated) {
+        eliminatedIndicator.setVisible(isEliminated);
+        if (isEliminated) {
+            pendingIndicator.setVisible(false); // Hide pending if eliminated
+        }
+        eliminatedIndicator.repaint();
+        pendingIndicator.repaint();
+    }
+
 }

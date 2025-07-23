@@ -35,6 +35,7 @@ import Project.Common.RoomAction;
 import Project.Common.RoomResultPayload;
 import Project.Common.TextFX;
 import Project.Common.User;
+import Project.Server.GameRoom;
 import Project.Common.TextFX.Color;
 import Project.Common.TimerPayload;
 
@@ -66,7 +67,7 @@ public enum Client {
     private Phase currentPhase = Phase.READY;
     // callback that updates the UI
     private static List<IClientEvents> events = new ArrayList<IClientEvents>();
-    private String currentRoom;
+    private GameRoom currentRoom;
 
     private void error(String message) {
         LoggerUtil.INSTANCE.severe(TextFX.colorize(String.format("%s", message), Color.RED));
@@ -293,7 +294,7 @@ public enum Client {
             // UCID: gb373 Date: 07/10/2025 Summary: Added PICK command to allow players to
             // make a choice.
             else if (text.startsWith(Command.PICK.command)) {
-               
+
                 String choice = text.replace(Command.PICK.command, "").trim().toLowerCase();
 
                 if (myUser.isEliminated()) {
@@ -301,7 +302,6 @@ public enum Client {
                     return true;
                 }
 
-               
                 if (!choice.matches("[rps]")) {
                     LoggerUtil.INSTANCE
                             .warning(TextFX.colorize("Invalid pick. Use /pick r, /pick p, or /pick s", Color.RED));
@@ -543,6 +543,37 @@ public enum Client {
             case PayloadType.GAME_EVENT:
                 processGameEvent(payload);
                 break;
+            // UCID: gb373 Date: 07/09/2025 Summary: Added PENDING_PICK to handle pending
+            // pick actions to the client.
+            case PayloadType.PENDING_PICK:
+                if (payload instanceof Payload pp) {
+                    long clientId = pp.getClientId();
+                    boolean isPending = Boolean.parseBoolean(pp.getMessage());
+                    passToUICallback(IPointsEvent.class, e -> {
+                        if (e instanceof IPointsEvent) {
+                            ((IPointsEvent) e).onPendingPick(clientId, isPending);
+                        }
+                    });
+                } else {
+                    LoggerUtil.INSTANCE.warning("Received PENDING_PICK payload that is not of type Payload");
+                }
+                break;
+            // UCID: gb373 Date: 07/09/2025 Summary: Added ELIMINATED to handle elimination
+            // status updates to the client.
+            case PayloadType.ELIMINATED:
+                if (payload instanceof Payload ep) {
+                    long clientId = ep.getClientId();
+                    boolean isEliminated = Boolean.parseBoolean(ep.getMessage());
+                    passToUICallback(IPointsEvent.class, e -> {
+                        if (e instanceof IPointsEvent) {
+                            ((IPointsEvent) e).onEliminationStatus(clientId, isEliminated);
+                        }
+                    });
+                } else {
+                    LoggerUtil.INSTANCE.warning("Received ELIMINATED payload that is not of type Payload");
+                }
+                break;
+
             default:
                 LoggerUtil.INSTANCE.warning(TextFX.colorize("Unhandled payload type", Color.YELLOW));
                 break;
@@ -629,6 +660,10 @@ public enum Client {
         passToUICallback(ITurnEvent.class, e -> e.onTookTurn(Constants.DEFAULT_CLIENT_ID, false));
     }
 
+    // UCID: gb373
+    // Date: 07/23/2025
+    // Summary: Processes the message payload from the server, logging it and
+    // passing it to the UI.
     private void processGameEvent(Payload payload) {
         if (payload.getMessage() == null || payload.getMessage().isEmpty()) {
             LoggerUtil.INSTANCE.warning("Received empty game event message");
@@ -807,8 +842,9 @@ public enum Client {
                 break;
             case ROOM_JOIN:
                 if (connectionPayload.getMessage() != null && isMyClientId(connectionPayload.getClientId())) {
-                    currentRoom = connectionPayload.getMessage();
-                    LoggerUtil.INSTANCE.info(TextFX.colorize(String.format("Joined %s", currentRoom), Color.GREEN));
+                    currentRoom = new GameRoom(connectionPayload.getMessage());
+                    LoggerUtil.INSTANCE.info(
+                            TextFX.colorize(String.format("Joined %s", connectionPayload.getMessage()), Color.GREEN));
 
                 }
                 // cascade to manage knownClients

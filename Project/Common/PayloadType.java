@@ -29,4 +29,6 @@ public enum PayloadType {
        POINTS_UPDATE, // Used to update a player's points
        TIME, // syncs current time of various timers
        GAME_EVENT, // used to sync game events (e.g., game start, game end)
+       PENDING_PICK, // used to indicate a pending pick action
+       ELIMINATED, // used to indicate a player has been eliminated
 }
