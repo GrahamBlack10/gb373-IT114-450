@@ -13,6 +13,8 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import javax.swing.SwingUtilities;
+
 import Project.Client.Interfaces.IClientEvents;
 import Project.Client.Interfaces.IConnectionEvents;
 import Project.Client.Interfaces.IMessageEvents;
@@ -38,12 +40,13 @@ import Project.Common.User;
 import Project.Server.GameRoom;
 import Project.Common.TextFX.Color;
 import Project.Common.TimerPayload;
+import Project.Client.Views.PlayView;
 
 /**
  * Demoing bi-directional communication between client and server in a
  * multi-client scenario
  */
-public enum Client {
+public enum Client implements IReadyEvent {
     INSTANCE;
 
     {
@@ -68,6 +71,8 @@ public enum Client {
     // callback that updates the UI
     private static List<IClientEvents> events = new ArrayList<IClientEvents>();
     private GameRoom currentRoom;
+    private boolean extraOptionsEnabled = false;
+    private PlayView playView;
 
     private void error(String message) {
         LoggerUtil.INSTANCE.severe(TextFX.colorize(String.format("%s", message), Color.RED));
@@ -573,6 +578,33 @@ public enum Client {
                     LoggerUtil.INSTANCE.warning("Received ELIMINATED payload that is not of type Payload");
                 }
                 break;
+            // UCID: gb373 Date: 07/24/2025
+            // Summary: Added EXTRA_OPTIONS_ENABLED and EXTRA_OPTIONS_TOGGLE to handle extra
+            // options in the game.
+            case EXTRA_OPTIONS_ENABLED:
+                boolean enabled = Boolean.parseBoolean(payload.getMessage());
+                setExtraOptionsEnabled(enabled); // <-- add this to update your client state
+                passToUICallback(IReadyEvent.class, e -> e.onExtraOptionsEnabled(enabled));
+                break;
+
+            case EXTRA_OPTIONS_TOGGLE:
+                boolean extraOptionsToggle = Boolean.parseBoolean(payload.getMessage());
+                passToUICallback(IReadyEvent.class, e -> e.onExtraOptionsToggle(extraOptionsToggle));
+                break;
+            case TURN_CONFIRMED:
+                if (Client.INSTANCE.getPlayView() != null) {
+                    Client.INSTANCE.getPlayView().hideButtonsAfterPick();
+                }
+                break;
+            // UCID: gb373 Date: 07/24/2025
+            // Summary: Added HOST_STATUS to handle host status updates for clients.
+            // This will allow the UI to reflect whether the client is a host or not.
+            case HOST_STATUS:
+                boolean isHost = Boolean.parseBoolean(payload.getMessage());
+                if (getPlayView() != null) {
+                    getPlayView().setHost(isHost);
+                }
+                break;
 
             default:
                 LoggerUtil.INSTANCE.warning(TextFX.colorize("Unhandled payload type", Color.YELLOW));
@@ -717,6 +749,14 @@ public enum Client {
         System.out.println(TextFX.colorize("Current phase is " + currentPhase.name(), Color.YELLOW));
 
         passToUICallback(IPhaseEvent.class, e -> e.onReceivePhase(currentPhase));
+    }
+
+    public void onReceivePhase(Phase phase) {
+        SwingUtilities.invokeLater(() -> {
+            if (playView != null) {
+                playView.changePhase(phase);
+            }
+        });
     }
 
     private void processResetReady() {
@@ -956,6 +996,67 @@ public enum Client {
             System.out.println("Exception from main()");
             e.printStackTrace();
         }
+    }
+
+    public void sendPayload(Payload payload) throws IOException {
+        if (out != null) {
+            out.writeObject(payload);
+            out.flush();
+        }
+    }
+
+    public void sendToggleExtraOptions(boolean enabled) throws IOException {
+        Payload p = new Payload();
+        p.setPayloadType(PayloadType.EXTRA_OPTIONS_TOGGLE);
+        p.setMessage(Boolean.toString(enabled));
+        sendPayload(p);
+    }
+
+    // Setter for PlayView, to be called from your UI initialization code
+    public void setPlayView(PlayView playView) {
+        this.playView = playView;
+    }
+
+    // Getter for PlayView
+    public PlayView getPlayView() {
+        return this.playView;
+    }
+
+    @Override
+    public void onExtraOptionsEnabled(boolean enabled) {
+        System.out.println("onExtraOptionsEnabled called with: " + enabled);
+        SwingUtilities.invokeLater(() -> {
+            if (Client.INSTANCE.getPlayView() != null) {
+                System.out.println("PlayView exists. Updating buttons.");
+                Client.INSTANCE.getPlayView().setExtraOptionsEnabled(enabled);
+            } else {
+                System.out.println("PlayView is null");
+            }
+        });
+    }
+
+    @Override
+    public void onExtraOptionsToggle(boolean enabled) {
+        // Implement your logic here, or leave empty if not needed
+        // Example: update UI or internal state
+        SwingUtilities.invokeLater(() -> {
+            // Example: playView.setExtraOptionsToggle(enabled);
+        });
+    }
+
+    @Override
+    public void onReceiveReady(long clientId, boolean isReady, boolean isQuiet) {
+        // Implement your logic here, or leave empty if not needed
+        // Example: update UI or internal state
+        // Example: playView.updateReadyStatus(clientId, isReady, isQuiet);
+    }
+
+    public boolean isExtraOptionsEnabled() {
+        return extraOptionsEnabled;
+    }
+
+    public void setExtraOptionsEnabled(boolean enabled) {
+        this.extraOptionsEnabled = enabled;
     }
 
 }

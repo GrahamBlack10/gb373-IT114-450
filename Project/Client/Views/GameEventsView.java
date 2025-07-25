@@ -120,7 +120,8 @@ public class GameEventsView extends JPanel implements IPhaseEvent, IReadyEvent, 
 
     // UCID: gb373
     // Date: 07/23/2025
-    // Summary: Handles incoming messages from the server and displays them in the game panel.
+    // Summary: Handles incoming messages from the server and displays them in the
+    // game panel.
     @Override
     public void onMessageReceive(long id, String message) {
         if (id == Constants.GAME_EVENT_CHANNEL) {// using -2 as an internal channel for GameEvents
@@ -137,4 +138,24 @@ public class GameEventsView extends JPanel implements IPhaseEvent, IReadyEvent, 
         }
         timerText.setVisible(true);
     }
+
+    @Override
+    public void onExtraOptionsToggle(boolean toggled) {
+        // Implement logic if needed when extra options are toggled
+    }
+
+    @Override
+    public void onExtraOptionsEnabled(boolean enabled) {
+        System.out.println("onExtraOptionsEnabled called with: " + enabled);
+
+        SwingUtilities.invokeLater(() -> {
+            if (Client.INSTANCE.getPlayView() != null) {
+                System.out.println("Updating PlayView with extraOptionsEnabled: " + enabled);
+                Client.INSTANCE.getPlayView().setExtraOptionsEnabled(enabled);
+            } else {
+                System.out.println("PlayView is null!");
+            }
+        });
+    }
+
 }

@@ -290,4 +290,12 @@ public class UserListView extends JPanel
             });
         }
     }
+
+    @Override
+    public void onExtraOptionsEnabled(boolean enabled) {
+    }
+
+    @Override
+    public void onExtraOptionsToggle(boolean enabled) {
+    }
 }

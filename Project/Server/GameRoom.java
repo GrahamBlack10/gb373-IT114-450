@@ -12,6 +12,7 @@ public class GameRoom extends BaseGameRoom {
     private TimedEvent roundTimer = null;
     private int round = 0;
     private String roomName;
+    private boolean extraOptionsEnabled = false;
 
     @Override
     protected void onTurnStart() {
@@ -42,13 +43,22 @@ public class GameRoom extends BaseGameRoom {
     // onClientAdded is called when a new client joins the room.
     @Override
     protected void onClientAdded(ServerThread sp) {
-        // Sync only what's needed depending on phase to avoid UI inconsistencies
         syncCurrentPhase(sp);
         syncReadyStatus(sp);
         if (currentPhase != Phase.READY) {
             syncTurnStatus(sp);
             syncPlayerPoints(sp);
         }
+
+        // UCID: gb373
+        // Date: 07/24/2025
+        // Summary: Setting the host status for the client.
+        boolean isHost = clientsInRoom.size() == 1;
+
+        Payload hostPayload = new Payload();
+        hostPayload.setPayloadType(PayloadType.HOST_STATUS);
+        hostPayload.setMessage(Boolean.toString(isHost));
+        sp.sendToClient(hostPayload);
     }
 
     @Override
@@ -71,6 +81,13 @@ public class GameRoom extends BaseGameRoom {
     protected void onRoundStart() {
         resetRoundTimer();
         resetPlayerChoices();
+
+        clientsInRoom.values().forEach(p -> {
+            if (!p.isEliminated()) {
+                p.sendEliminationStatus(p.getClientId(), false);
+            }
+        });
+
         changePhase(Phase.IN_PROGRESS);
         round++;
         sendGameEvent("Round " + round + " has started! Use /pick r/p/s");
@@ -95,6 +112,7 @@ public class GameRoom extends BaseGameRoom {
             if (!p.isEliminated() && p.getChoice() == null) {
                 p.setEliminated(true);
                 sendGameEvent(p.getDisplayName() + " was eliminated for not picking.");
+                p.sendEliminationStatus(p.getClientId(), true);
             }
         });
 
@@ -115,29 +133,22 @@ public class GameRoom extends BaseGameRoom {
                 continue;
 
             if (winsAgainst(atkChoice, defChoice)) {
+                // Attacker wins — gets a point, defender eliminated
                 attacker.setPoints(attacker.getPoints() + 1);
                 sendPlayerPoints(attacker);
                 sendGameEvent(attacker.getDisplayName() + " (" + atkChoice + ") beat " +
                         defender.getDisplayName() + " (" + defChoice + ")");
                 toEliminate.add(defender);
             } else if (winsAgainst(defChoice, atkChoice)) {
-                defender.setPoints(defender.getPoints() + 1);
-                sendPlayerPoints(defender);
+                // Defender wins — NO point awarded, attacker survives
                 sendGameEvent(defender.getDisplayName() + " (" + defChoice + ") beat " +
                         attacker.getDisplayName() + " (" + atkChoice + ")");
             } else {
+                // Tie — no points
                 sendGameEvent(attacker.getDisplayName() + " (" + atkChoice + ") tied with " +
                         defender.getDisplayName() + " (" + defChoice + ")");
             }
         }
-
-        clientsInRoom.values().forEach(p -> {
-            if (!p.isEliminated() && p.getChoice() == null) {
-                p.setEliminated(true);
-                sendGameEvent(p.getDisplayName() + " was eliminated for not picking.");
-                p.sendEliminationStatus(p.getClientId(), true); // <-- Add this line
-            }
-        });
 
         // After pairwise battles:
         for (ServerThread p : toEliminate) {
@@ -209,9 +220,17 @@ public class GameRoom extends BaseGameRoom {
             }
 
             choice = choice.trim().toLowerCase();
-            if (!choice.matches("[rps]")) {
-                player.sendMessage(Constants.DEFAULT_CLIENT_ID, "Invalid choice. Use r, p, or s.");
-                return;
+
+            if (extraOptionsEnabled) {
+                if (!choice.matches("[rpsfw]")) {
+                    player.sendMessage(Constants.DEFAULT_CLIENT_ID, "Invalid choice. Use r, p, s, f, or w.");
+                    return;
+                }
+            } else {
+                if (!choice.matches("[rps]")) {
+                    player.sendMessage(Constants.DEFAULT_CLIENT_ID, "Invalid choice. Use r, p, or s.");
+                    return;
+                }
             }
 
             player.setChoice(choice);
@@ -219,6 +238,10 @@ public class GameRoom extends BaseGameRoom {
             sendTurnStatus(player, true);
             sendGameEvent(player.getDisplayName() + " picked.");
             clientsInRoom.values().forEach(p -> p.sendPendingStatus(player.getClientId(), false));
+
+            Payload confirm = new Payload();
+            confirm.setPayloadType(PayloadType.TURN_CONFIRMED);
+            player.sendToClient(confirm);
 
             long remaining = clientsInRoom.values().stream()
                     .filter(p -> !p.isEliminated() && p.getChoice() == null)
@@ -262,10 +285,9 @@ public class GameRoom extends BaseGameRoom {
         clientsInRoom.values().forEach(p -> {
             p.setChoice(null);
             p.setTookTurn(false);
-            clientsInRoom.values().forEach(other -> other.sendPendingStatus(p.getClientId(), true));
+            p.setEliminated(false);
+            broadcastEliminationStatus(p.getClientId(), false);
         });
-
-        sendResetTurnStatus();
     }
 
     private void resetRoundTimer() {
@@ -310,14 +332,55 @@ public class GameRoom extends BaseGameRoom {
         clientsInRoom.values().forEach(p -> p.sendTurnStatus(client.getClientId(), tookTurn));
     }
 
-    private void sendResetTurnStatus() {
-        clientsInRoom.values().forEach(p -> p.sendResetTurnStatus());
+    protected void handleExtraOptionsToggle(ServerThread player) {
+        if (currentPhase != Phase.READY) {
+            player.sendMessage(Constants.DEFAULT_CLIENT_ID, "You can only toggle options during the ready phase.");
+            return;
+        }
+
+        // UCID: gb373
+        // Date: 07/24/2025
+        // Summary: Toggle extra options for the game and only the host can do this.
+        boolean isHost = isHost(player);
+        if (!isHost) {
+            player.sendMessage(Constants.DEFAULT_CLIENT_ID, "Only the host can toggle extra options.");
+            return;
+        }
+
+        this.extraOptionsEnabled = !this.extraOptionsEnabled;
+
+        Payload payload = new Payload();
+        payload.setPayloadType(PayloadType.EXTRA_OPTIONS_ENABLED);
+        payload.setMessage(Boolean.toString(this.extraOptionsEnabled));
+        sendToAllClients(payload);
+
+        sendGameEvent("Extra options are now " + (extraOptionsEnabled ? "ENABLED" : "DISABLED"));
     }
 
+    // UCID: gb373
+    // Date: 07/24/2025
+    // Summary: Battle logic for Rock-Paper-Scissors with extra options.
     private boolean winsAgainst(String a, String b) {
-        return (a.equals("r") && b.equals("s")) ||
-                (a.equals("p") && b.equals("r")) ||
-                (a.equals("s") && b.equals("p"));
+        if (!extraOptionsEnabled) {
+            // Original RPS
+            return (a.equals("r") && b.equals("s")) || // Rock beats Scissors
+                    (a.equals("p") && b.equals("r")) || // Paper beats Rock
+                    (a.equals("s") && b.equals("p"));   // Scissors beats Paper
+        } else {
+
+            if (a.equals("r")) {
+                return b.equals("s") || b.equals("f"); // Rock beats Scissors and Fire
+            } else if (a.equals("p")) {
+                return b.equals("r") || b.equals("w"); // Paper beats Rock and Water
+            } else if (a.equals("s")) {
+                return b.equals("p") || b.equals("w"); // Scissors beats Paper and Water
+            } else if (a.equals("f")) { // Fire
+                return b.equals("p") || b.equals("s"); // Fire beats Paper and Scissors
+            } else if (a.equals("w")) { // Water
+                return b.equals("f") || b.equals("r"); // Water beats Fire and Rock
+            }
+            return false;
+        }
     }
 
     @Override
@@ -351,6 +414,11 @@ public class GameRoom extends BaseGameRoom {
 
     private void broadcastEliminationStatus(long clientId, boolean isEliminated) {
         clientsInRoom.values().forEach(client -> client.sendEliminationStatus(clientId, isEliminated));
+    }
+
+    private boolean isHost(ServerThread player) {
+        return clientsInRoom.values().stream().findFirst().map(p -> p.getClientId() == player.getClientId())
+                .orElse(false);
     }
 
 }

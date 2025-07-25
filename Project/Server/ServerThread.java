@@ -86,7 +86,8 @@ public class ServerThread extends BaseServerThread {
 
     // UCID: gb373
     // Date: 07/23/2025
-    // Summary: Sends a game event message to the client, which can be used for various game-related notifications.
+    // Summary: Sends a game event message to the client, which can be used for
+    // various game-related notifications.
     public boolean sendGameEvent(String message) {
         Payload payload = new Payload();
         payload.setPayloadType(PayloadType.GAME_EVENT); // Make sure this enum exists in PayloadType
@@ -318,6 +319,14 @@ public class ServerThread extends BaseServerThread {
                 // Notify that initialization is complete
                 onInitialized();
                 break;
+            case EXTRA_OPTIONS_TOGGLE:
+                try {
+                    ((GameRoom) currentRoom).handleExtraOptionsToggle(this);
+                } catch (Exception e) {
+                    sendMessage(Constants.DEFAULT_CLIENT_ID, "You must be in a GameRoom to toggle extra options.");
+                }
+                break;
+
             default:
                 LoggerUtil.INSTANCE.warning(
                         TextFX.colorize("Unknown payload type received: " + incoming.getPayloadType(), Color.RED));
@@ -395,7 +404,8 @@ public class ServerThread extends BaseServerThread {
 
     // UCID: gb373
     // Date: 07/23/2025
-    // Summary: Sends the elimination status to the client, indicating whether the player has been eliminated.
+    // Summary: Sends the elimination status to the client, indicating whether the
+    // player has been eliminated.
     public boolean sendEliminationStatus(long clientId, boolean isEliminated) {
         Payload payload = new Payload();
         payload.setPayloadType(PayloadType.ELIMINATED); // Define this enum

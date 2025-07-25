@@ -31,4 +31,8 @@ public enum PayloadType {
        GAME_EVENT, // used to sync game events (e.g., game start, game end)
        PENDING_PICK, // used to indicate a pending pick action
        ELIMINATED, // used to indicate a player has been eliminated
+       EXTRA_OPTIONS_ENABLED, // used to enable or disable extra options in the game
+       EXTRA_OPTIONS_TOGGLE, // used to toggle extra options in the game
+       TURN_CONFIRMED, // used to confirm a player's turn choice
+       HOST_STATUS, // used to indicate the host status of a player
 }

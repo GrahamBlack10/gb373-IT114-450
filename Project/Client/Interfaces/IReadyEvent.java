@@ -8,4 +8,6 @@ public interface IReadyEvent extends IGameEvents {
      * @param isReady
      */
     void onReceiveReady(long clientId, boolean isReady, boolean isQuiet);
+    void onExtraOptionsEnabled(boolean isEnabled);
+    void onExtraOptionsToggle(boolean isEnabled);
 }
