@@ -155,14 +155,14 @@ public class UserListView extends JPanel
     }
 
     @Override
-    public void onTookTurn(long clientId, boolean didtakeCurn) {
+    public void onTookTurn(long clientId, boolean didtakeTurn) {
         if (clientId == Constants.DEFAULT_CLIENT_ID) {
             SwingUtilities.invokeLater(() -> {
                 userItemsMap.values().forEach(u -> u.setTurn(false));// reset all
             });
         } else if (userItemsMap.containsKey(clientId)) {
             SwingUtilities.invokeLater(() -> {
-                userItemsMap.get(clientId).setTurn(didtakeCurn);
+                userItemsMap.get(clientId).setTurn(didtakeTurn);
             });
         }
     }

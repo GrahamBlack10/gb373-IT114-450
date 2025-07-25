@@ -203,8 +203,11 @@ public class ServerThread extends BaseServerThread {
         if (isSync) {
             payload.setPayloadType(PayloadType.SYNC_CLIENT);
         }
+
         payload.setClientId(clientId);
         payload.setClientName(clientName);
+        payload.setMessage(currentRoom.getName());
+
         return sendToClient(payload);
     }
 
@@ -408,7 +411,7 @@ public class ServerThread extends BaseServerThread {
     // player has been eliminated.
     public boolean sendEliminationStatus(long clientId, boolean isEliminated) {
         Payload payload = new Payload();
-        payload.setPayloadType(PayloadType.ELIMINATED); // Define this enum
+        payload.setPayloadType(PayloadType.ELIMINATED);
         payload.setClientId(clientId);
         payload.setMessage(Boolean.toString(isEliminated));
         return sendToClient(payload);

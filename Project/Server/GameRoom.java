@@ -72,6 +72,11 @@ public class GameRoom extends BaseGameRoom {
 
     @Override
     protected void onSessionStart() {
+        clientsInRoom.values().forEach(player -> {
+            player.setEliminated(false);
+            player.sendEliminationStatus(player.getClientId(), false);
+        });
+
         changePhase(Phase.IN_PROGRESS);
         round = 0;
         onRoundStart();
@@ -92,12 +97,21 @@ public class GameRoom extends BaseGameRoom {
         round++;
         sendGameEvent("Round " + round + " has started! Use /pick r/p/s");
 
+        clientsInRoom.values().forEach(p -> {
+            if (!p.isEliminated()) {
+                clientsInRoom.values().forEach(other -> {
+                    other.sendPendingStatus(p.getClientId(), true);
+                });
+            }
+        });
+
+        // Start 30-second timer for the round
         roundTimer = new TimedEvent(30, this::onRoundEnd);
         roundTimer.setTickCallback(time -> sendCurrentTime(TimerType.ROUND, time));
     }
 
     // UCID: gb373
-    // Date: 07/09/2025
+    // Date: 07/25/2025
     // Summary: Handles the end of a round, checking player choices and determining
     // winners.
     // If only one player remains, the game ends. If all players made choices, the
@@ -107,12 +121,11 @@ public class GameRoom extends BaseGameRoom {
     protected void onRoundEnd() {
         resetRoundTimer();
 
-        // Eliminate players who didn't make a choice
+        // Eliminate players who didn't choose
         clientsInRoom.values().forEach(p -> {
             if (!p.isEliminated() && p.getChoice() == null) {
                 p.setEliminated(true);
                 sendGameEvent(p.getDisplayName() + " was eliminated for not picking.");
-                p.sendEliminationStatus(p.getClientId(), true);
             }
         });
 
@@ -121,52 +134,60 @@ public class GameRoom extends BaseGameRoom {
                 .collect(Collectors.toList());
 
         Set<ServerThread> toEliminate = new HashSet<>();
-
         for (int i = 0; i < active.size(); i++) {
-            ServerThread attacker = active.get(i);
-            ServerThread defender = active.get((i + 1) % active.size());
+            for (int j = i + 1; j < active.size(); j++) {
+                ServerThread a = active.get(i);
+                ServerThread b = active.get(j);
 
-            String atkChoice = attacker.getChoice();
-            String defChoice = defender.getChoice();
+                if (toEliminate.contains(a) || toEliminate.contains(b))
+                    continue;
 
-            if (atkChoice == null || defChoice == null)
-                continue;
+                String choiceA = a.getChoice();
+                String choiceB = b.getChoice();
 
-            if (winsAgainst(atkChoice, defChoice)) {
-                // Attacker wins — gets a point, defender eliminated
-                attacker.setPoints(attacker.getPoints() + 1);
-                sendPlayerPoints(attacker);
-                sendGameEvent(attacker.getDisplayName() + " (" + atkChoice + ") beat " +
-                        defender.getDisplayName() + " (" + defChoice + ")");
-                toEliminate.add(defender);
-            } else if (winsAgainst(defChoice, atkChoice)) {
-                // Defender wins — NO point awarded, attacker survives
-                sendGameEvent(defender.getDisplayName() + " (" + defChoice + ") beat " +
-                        attacker.getDisplayName() + " (" + atkChoice + ")");
-            } else {
-                // Tie — no points
-                sendGameEvent(attacker.getDisplayName() + " (" + atkChoice + ") tied with " +
-                        defender.getDisplayName() + " (" + defChoice + ")");
+                if (choiceA == null || choiceB == null)
+                    continue;
+
+                boolean aWins = winsAgainst(choiceA, choiceB);
+                boolean bWins = winsAgainst(choiceB, choiceA);
+
+                if (aWins && !bWins) {
+                    a.setPoints(a.getPoints() + 1);
+                    sendGameEvent(a.getDisplayName() + " (" + choiceA + ") beat " +
+                            b.getDisplayName() + " (" + choiceB + ")");
+                    toEliminate.add(b);
+                } else if (bWins && !aWins) {
+                    b.setPoints(b.getPoints() + 1);
+                    sendGameEvent(b.getDisplayName() + " (" + choiceB + ") beat " +
+                            a.getDisplayName() + " (" + choiceA + ")");
+                    toEliminate.add(a);
+                } else {
+                    sendGameEvent(a.getDisplayName() + " (" + choiceA + ") tied with " +
+                            b.getDisplayName() + " (" + choiceB + ")");
+                }
             }
         }
 
-        // After pairwise battles:
         for (ServerThread p : toEliminate) {
             if (!p.isEliminated()) {
                 p.setEliminated(true);
                 sendGameEvent(p.getDisplayName() + " was eliminated.");
                 broadcastEliminationStatus(p.getClientId(), true);
+                p.sendEliminationStatus(p.getClientId(), true);
             }
         }
-
-        sendPointsStatusToAll();
 
         long survivors = clientsInRoom.values().stream()
                 .filter(p -> !p.isEliminated())
                 .count();
 
+        sendGameEvent("Survivors remaining: " + survivors);
+
         if (survivors == 1) {
-            ServerThread winner = clientsInRoom.values().stream().filter(p -> !p.isEliminated()).findFirst().get();
+            ServerThread winner = clientsInRoom.values().stream()
+                    .filter(p -> !p.isEliminated())
+                    .findFirst()
+                    .get();
             sendGameEvent("Game Over! Winner: " + winner.getDisplayName());
             onSessionEnd();
         } else if (survivors == 0) {
@@ -175,10 +196,11 @@ public class GameRoom extends BaseGameRoom {
         } else {
             onRoundStart();
         }
+
     }
 
     // UCID: gb373
-    // Date: 07/09/2025
+    // Date: 07/25/2025
     // Summary: Handles the end of the session, notifying players of their points
     // and resetting the game state.
     @Override
@@ -186,6 +208,20 @@ public class GameRoom extends BaseGameRoom {
         clientsInRoom.values().stream()
                 .sorted(Comparator.comparingInt(ServerThread::getPoints).reversed())
                 .forEach(p -> sendGameEvent(p.getDisplayName() + ": " + p.getPoints() + " points"));
+
+        clientsInRoom.values().forEach(p -> {
+            PointsPayload pp = new PointsPayload();
+            pp.setPayloadType(PayloadType.POINTS);
+            pp.setClientId(p.getClientId());
+            pp.setPoints(p.getPoints());
+            clientsInRoom.values().forEach(other -> other.sendToClient(pp));
+        });
+
+        clientsInRoom.values().forEach(p -> {
+            if (p.isEliminated()) {
+                broadcastEliminationStatus(p.getClientId(), true);
+            }
+        });
 
         clientsInRoom.values().forEach(player -> {
             player.setPoints(0);
@@ -285,8 +321,9 @@ public class GameRoom extends BaseGameRoom {
         clientsInRoom.values().forEach(p -> {
             p.setChoice(null);
             p.setTookTurn(false);
-            p.setEliminated(false);
-            broadcastEliminationStatus(p.getClientId(), false);
+            if (!p.isEliminated()) {
+                broadcastEliminationStatus(p.getClientId(), false);
+            }
         });
     }
 
@@ -305,15 +342,6 @@ public class GameRoom extends BaseGameRoom {
 
     private void sendToAllClients(Payload payload) {
         clientsInRoom.values().forEach(p -> p.sendToClient(payload));
-    }
-
-    private void sendPointsStatusToAll() {
-        clientsInRoom.values().forEach(
-                p -> clientsInRoom.values().forEach(target -> target.sendPoints(p.getClientId(), p.getPoints())));
-    }
-
-    private void sendPlayerPoints(ServerThread sp) {
-        clientsInRoom.values().forEach(p -> p.sendPoints(sp.getClientId(), sp.getPoints()));
     }
 
     private void syncPlayerPoints(ServerThread p) {
@@ -365,7 +393,7 @@ public class GameRoom extends BaseGameRoom {
             // Original RPS
             return (a.equals("r") && b.equals("s")) || // Rock beats Scissors
                     (a.equals("p") && b.equals("r")) || // Paper beats Rock
-                    (a.equals("s") && b.equals("p"));   // Scissors beats Paper
+                    (a.equals("s") && b.equals("p")); // Scissors beats Paper
         } else {
 
             if (a.equals("r")) {
@@ -413,7 +441,9 @@ public class GameRoom extends BaseGameRoom {
     }
 
     private void broadcastEliminationStatus(long clientId, boolean isEliminated) {
-        clientsInRoom.values().forEach(client -> client.sendEliminationStatus(clientId, isEliminated));
+        clientsInRoom.values().forEach(client -> {
+            client.sendEliminationStatus(clientId, isEliminated);
+        });
     }
 
     private boolean isHost(ServerThread player) {

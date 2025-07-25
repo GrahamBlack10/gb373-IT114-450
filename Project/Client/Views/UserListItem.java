@@ -39,11 +39,12 @@ public class UserListItem extends JPanel {
         textContainer.setBackground(new Color(0, 0, 0, 0));
         add(textContainer);
 
-        // Second line: indicator + points
+        // Second line: indicator + points + pending + eliminated
         JPanel rowPanel = new JPanel();
         rowPanel.setLayout(new BoxLayout(rowPanel, BoxLayout.X_AXIS));
         rowPanel.setOpaque(false);
 
+        // TURN indicator
         turnIndicator = new JPanel();
         turnIndicator.setPreferredSize(new Dimension(10, 10));
         turnIndicator.setMinimumSize(turnIndicator.getPreferredSize());
@@ -51,15 +52,20 @@ public class UserListItem extends JPanel {
         turnIndicator.setOpaque(true);
         turnIndicator.setVisible(true);
         rowPanel.add(turnIndicator);
-        rowPanel.add(Box.createHorizontalStrut(8)); // spacing between indicator and points
+        rowPanel.add(Box.createHorizontalStrut(8));
 
+        // POINTS
         pointsPanel = new JEditorPane("text/html", "");
         pointsPanel.setEditable(false);
         pointsPanel.setBorder(new EmptyBorder(0, 0, 0, 0));
         pointsPanel.setOpaque(false);
         pointsPanel.setBackground(new Color(0, 0, 0, 0));
         rowPanel.add(pointsPanel);
+        pointsPanel.setPreferredSize(new Dimension(40, 20));
+        pointsPanel.setMinimumSize(pointsPanel.getPreferredSize());
+        pointsPanel.setMaximumSize(pointsPanel.getPreferredSize());
 
+        // PENDING indicator (orange)
         pendingIndicator = new JPanel();
         pendingIndicator.setPreferredSize(new Dimension(10, 10));
         pendingIndicator.setMinimumSize(pendingIndicator.getPreferredSize());
@@ -69,7 +75,8 @@ public class UserListItem extends JPanel {
         pendingIndicator.setVisible(false);
         rowPanel.add(pendingIndicator);
         rowPanel.add(Box.createHorizontalStrut(8));
-        // add eliminated indicator red square
+
+        // ELIMINATED indicator (red)
         eliminatedIndicator = new JPanel();
         eliminatedIndicator.setPreferredSize(new Dimension(10, 10));
         eliminatedIndicator.setMinimumSize(eliminatedIndicator.getPreferredSize());
@@ -81,6 +88,7 @@ public class UserListItem extends JPanel {
 
         add(rowPanel);
         setPoints(-1);
+
     }
 
     /**
@@ -136,22 +144,19 @@ public class UserListItem extends JPanel {
     }
 
     public void setPendingPick(boolean isPending) {
-        // Only show pending if NOT eliminated
-        if (!eliminatedIndicator.isVisible()) {
-            pendingIndicator.setVisible(isPending);
+        if (isPending) {
+            setTurn(true, Color.ORANGE);
         } else {
-            pendingIndicator.setVisible(false);
+            setTurn(false);
         }
-        pendingIndicator.repaint();
     }
 
     public void setEliminated(boolean isEliminated) {
-        eliminatedIndicator.setVisible(isEliminated);
         if (isEliminated) {
-            pendingIndicator.setVisible(false); // Hide pending if eliminated
+            setTurn(true, Color.RED);
+        } else {
+            setTurn(false);
         }
-        eliminatedIndicator.repaint();
-        pendingIndicator.repaint();
     }
 
 }
