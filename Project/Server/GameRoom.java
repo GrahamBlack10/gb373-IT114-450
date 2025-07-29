@@ -140,9 +140,6 @@ public class GameRoom extends BaseGameRoom {
         for (int i = 0; i < n; i++) {
             ServerThread a = active.get(i);
             ServerThread b = active.get((i + 1) % n);
-            
-            if (toEliminate.contains(a) || toEliminate.contains(b))
-                continue;
 
             String choiceA = a.getChoice();
             String choiceB = b.getChoice();
