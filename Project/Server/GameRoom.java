@@ -135,20 +135,22 @@ public class GameRoom extends BaseGameRoom {
                 .collect(Collectors.toList());
 
         Set<ServerThread> toEliminate = new HashSet<>();
-        for (int i = 0; i < active.size(); i++) {
-            for (int j = i + 1; j < active.size(); j++) {
-                ServerThread a = active.get(i);
-                ServerThread b = active.get(j);
+        int n = active.size();
 
-                if (toEliminate.contains(a) || toEliminate.contains(b))
-                    continue;
+        for (int i = 0; i < n; i++) {
+            ServerThread a = active.get(i);
+            ServerThread b = active.get((i + 1) % n);
+            
+            if (toEliminate.contains(a) || toEliminate.contains(b))
+                continue;
 
-                String choiceA = a.getChoice();
-                String choiceB = b.getChoice();
+            String choiceA = a.getChoice();
+            String choiceB = b.getChoice();
 
-                if (choiceA == null || choiceB == null)
-                    continue;
+            if (choiceA == null || choiceB == null)
+                continue;
 
+            if (n == 2) {
                 boolean aWins = winsAgainst(choiceA, choiceB);
                 boolean bWins = winsAgainst(choiceB, choiceA);
 
@@ -166,6 +168,26 @@ public class GameRoom extends BaseGameRoom {
                     sendGameEvent(a.getDisplayName() + " (" + choiceA + ") tied with " +
                             b.getDisplayName() + " (" + choiceB + ")");
                 }
+
+                break;
+            }
+
+            boolean aWins = winsAgainst(choiceA, choiceB);
+            boolean bWins = winsAgainst(choiceB, choiceA);
+
+            if (aWins && !bWins) {
+                a.setPoints(a.getPoints() + 1);
+                sendGameEvent(a.getDisplayName() + " (" + choiceA + ") beat " +
+                        b.getDisplayName() + " (" + choiceB + ")");
+                toEliminate.add(b);
+            } else if (bWins && !aWins) {
+                b.setPoints(b.getPoints() + 1);
+                sendGameEvent(b.getDisplayName() + " (" + choiceB + ") beat " +
+                        a.getDisplayName() + " (" + choiceA + ")");
+                toEliminate.add(a);
+            } else {
+                sendGameEvent(a.getDisplayName() + " (" + choiceA + ") tied with " +
+                        b.getDisplayName() + " (" + choiceB + ")");
             }
         }
 
