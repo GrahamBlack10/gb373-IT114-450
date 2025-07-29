@@ -16,6 +16,9 @@ public class UserListItem extends JPanel {
     private final JPanel turnIndicator;
     private final JEditorPane pointsPanel;
     private final String displayName; // store original name for future features that require formatting changes
+    private int points = 0;
+    private final JPanel pendingIndicator;
+    private final JPanel eliminatedIndicator;
 
     /**
      * Constructor to create a UserListItem.
@@ -36,11 +39,12 @@ public class UserListItem extends JPanel {
         textContainer.setBackground(new Color(0, 0, 0, 0));
         add(textContainer);
 
-        // Second line: indicator + points
+        // Second line: indicator + points + pending + eliminated
         JPanel rowPanel = new JPanel();
         rowPanel.setLayout(new BoxLayout(rowPanel, BoxLayout.X_AXIS));
         rowPanel.setOpaque(false);
 
+        // TURN indicator
         turnIndicator = new JPanel();
         turnIndicator.setPreferredSize(new Dimension(10, 10));
         turnIndicator.setMinimumSize(turnIndicator.getPreferredSize());
@@ -48,17 +52,43 @@ public class UserListItem extends JPanel {
         turnIndicator.setOpaque(true);
         turnIndicator.setVisible(true);
         rowPanel.add(turnIndicator);
-        rowPanel.add(Box.createHorizontalStrut(8)); // spacing between indicator and points
+        rowPanel.add(Box.createHorizontalStrut(8));
 
+        // POINTS
         pointsPanel = new JEditorPane("text/html", "");
         pointsPanel.setEditable(false);
         pointsPanel.setBorder(new EmptyBorder(0, 0, 0, 0));
         pointsPanel.setOpaque(false);
         pointsPanel.setBackground(new Color(0, 0, 0, 0));
         rowPanel.add(pointsPanel);
+        pointsPanel.setPreferredSize(new Dimension(40, 20));
+        pointsPanel.setMinimumSize(pointsPanel.getPreferredSize());
+        pointsPanel.setMaximumSize(pointsPanel.getPreferredSize());
+
+        // PENDING indicator (orange)
+        pendingIndicator = new JPanel();
+        pendingIndicator.setPreferredSize(new Dimension(10, 10));
+        pendingIndicator.setMinimumSize(pendingIndicator.getPreferredSize());
+        pendingIndicator.setMaximumSize(pendingIndicator.getPreferredSize());
+        pendingIndicator.setOpaque(true);
+        pendingIndicator.setBackground(Color.ORANGE);
+        pendingIndicator.setVisible(false);
+        rowPanel.add(pendingIndicator);
+        rowPanel.add(Box.createHorizontalStrut(8));
+
+        // ELIMINATED indicator (red)
+        eliminatedIndicator = new JPanel();
+        eliminatedIndicator.setPreferredSize(new Dimension(10, 10));
+        eliminatedIndicator.setMinimumSize(eliminatedIndicator.getPreferredSize());
+        eliminatedIndicator.setMaximumSize(eliminatedIndicator.getPreferredSize());
+        eliminatedIndicator.setOpaque(true);
+        eliminatedIndicator.setBackground(Color.RED);
+        eliminatedIndicator.setVisible(false);
+        rowPanel.add(eliminatedIndicator);
 
         add(rowPanel);
         setPoints(-1);
+
     }
 
     /**
@@ -92,8 +122,9 @@ public class UserListItem extends JPanel {
      * @param points the number of points, or <0 to hide
      */
     public void setPoints(int points) {
+        this.points = points;
         if (points < 0) {
-            pointsPanel.setText("0");
+            pointsPanel.setText("");
             pointsPanel.setVisible(false);
         } else {
             pointsPanel.setText(Integer.toString(points));
@@ -104,16 +135,57 @@ public class UserListItem extends JPanel {
         repaint();
     }
 
-
     public int getPoints() {
-        try {
-            return Integer.parseInt(pointsPanel.getText());
-        } catch (NumberFormatException e) {
-            return 0; // Default to 0 if parsing fails
-        }
-    
+        return points;
     }
+
     public String getClientName() {
         return displayName;
     }
+
+    public void setPendingPick(boolean isPending) {
+        if (isPending) {
+            setTurn(true, Color.ORANGE);
+        } else {
+            setTurn(false);
+        }
+    }
+
+    public void setEliminated(boolean isEliminated) {
+        if (isEliminated) {
+            setTurn(true, Color.RED);
+        } else {
+            setTurn(false);
+        }
+    }
+
+    // UCID: gb373
+    // Date: 07/28/2025
+    // Summary: Sets the away status of the user. Setting the background to grey for
+    // away users.
+    public void setAway(boolean isAway) {
+        if (isAway) {
+            setBackground(Color.LIGHT_GRAY);
+            textContainer.setForeground(Color.GRAY);
+        } else {
+            setBackground(null);
+            textContainer.setForeground(Color.BLACK);
+        }
+        revalidate();
+        repaint();
+    }
+
+    public void setSpectator(boolean isSpectator) {
+    if (isSpectator) {
+        textContainer.setText(displayName + " (Spectator)");
+        textContainer.setForeground(Color.BLUE);
+    } else {
+        textContainer.setText(displayName);
+        textContainer.setForeground(Color.BLACK);
+    }
+    textContainer.revalidate();
+    textContainer.repaint();
+}
+
+
 }

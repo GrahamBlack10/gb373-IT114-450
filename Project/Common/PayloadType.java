@@ -29,4 +29,15 @@ public enum PayloadType {
        POINTS_UPDATE, // Used to update a player's points
        TIME, // syncs current time of various timers
        GAME_EVENT, // used to sync game events (e.g., game start, game end)
+       PENDING_PICK, // used to indicate a pending pick action
+       ELIMINATED, // used to indicate a player has been eliminated
+       EXTRA_OPTIONS_ENABLED, // used to enable or disable extra options in the game
+       EXTRA_OPTIONS_TOGGLE, // used to toggle extra options in the game
+       TURN_CONFIRMED, // used to confirm a player's turn choice
+       HOST_STATUS, // used to indicate the host status of a player
+       CHOICE_COOLDOWN_TOGGLE, // used to toggle choice cooldowns
+       CHOICE_COOLDOWN_ENABLED, // used to enable or disable choice cooldowns
+       AWAY_UPDATE, // used to update a player's away status
+       AWAY_TOGGLE, // used to toggle a player's away status
+       SPECTATOR_STATUS, // used to update a player's spectator status
 }

@@ -84,6 +84,10 @@ public class ServerThread extends BaseServerThread {
         return sendToClient(rp);
     }
 
+    // UCID: gb373
+    // Date: 07/23/2025
+    // Summary: Sends a game event message to the client, which can be used for
+    // various game-related notifications.
     public boolean sendGameEvent(String message) {
         Payload payload = new Payload();
         payload.setPayloadType(PayloadType.GAME_EVENT); // Make sure this enum exists in PayloadType
@@ -152,7 +156,8 @@ public class ServerThread extends BaseServerThread {
 
     // UCID: gb373
     // Date: 07/22/2025
-    // Summary: Sends points to the client, which can be used for scoring or other purposes.
+    // Summary: Sends points to the client, which can be used for scoring or other
+    // purposes.
     public boolean sendPoints(long clientId, int points) {
         PointsPayload pp = new PointsPayload();
         pp.setPayloadType(PayloadType.POINTS);
@@ -198,8 +203,11 @@ public class ServerThread extends BaseServerThread {
         if (isSync) {
             payload.setPayloadType(PayloadType.SYNC_CLIENT);
         }
+
         payload.setClientId(clientId);
         payload.setClientName(clientName);
+        payload.setMessage(currentRoom.getName());
+
         return sendToClient(payload);
     }
 
@@ -243,9 +251,18 @@ public class ServerThread extends BaseServerThread {
             case DISCONNECT:
                 currentRoom.handleDisconnect(this);
                 break;
+                // UCID: gb373
+                // Date: 07/28/2025
+                // Summary: Handles the message payload from the client.
+                // Spectators cannot send messages.
             case MESSAGE:
-                currentRoom.handleMessage(this, incoming.getMessage());
+                if (this.isSpectator()) {
+                    sendMessage(Constants.DEFAULT_CLIENT_ID, "Spectators cannot send chat messages.");
+                } else {
+                    currentRoom.handleMessage(this, incoming.getMessage());
+                }
                 break;
+
             case REVERSE:
                 currentRoom.handleReverseText(this, incoming.getMessage());
                 break;
@@ -263,14 +280,18 @@ public class ServerThread extends BaseServerThread {
                 break;
             case READY:
                 try {
-                    ((GameRoom) currentRoom).handleReady(this);
+                    ReadyPayload rp = (ReadyPayload) incoming;
+                    boolean wantsSpectator = Boolean.parseBoolean(rp.getMessage());
+                    boolean isReady = rp.isReady();
+                    ((GameRoom) currentRoom).handleReady(this, wantsSpectator, isReady);
                 } catch (Exception e) {
                     sendMessage(Constants.DEFAULT_CLIENT_ID, "You must be in a GameRoom to do the ready check");
                 }
                 break;
-                // UCID: gb373
-                // Date: 07/09/2025
-                // Summary: Handles the player's turn action in the game.
+
+            // UCID: gb373
+            // Date: 07/09/2025
+            // Summary: Handles the player's turn action in the game.
             case TURN:
                 try {
                     ((GameRoom) currentRoom).handleTurnAction(this, incoming.getMessage());
@@ -314,6 +335,37 @@ public class ServerThread extends BaseServerThread {
                 // Notify that initialization is complete
                 onInitialized();
                 break;
+            // UCID: gb373
+            // Date: 07/23/2025
+            // Summary: Handles the cooldown toggle action in the game from the server.
+            case CHOICE_COOLDOWN_TOGGLE:
+                try {
+                    ((GameRoom) currentRoom).handleChoiceCooldownToggle(this);
+                } catch (Exception e) {
+                    sendMessage(Constants.DEFAULT_CLIENT_ID, "You must be in a GameRoom to toggle choice cooldown.");
+                }
+                break;
+            case EXTRA_OPTIONS_TOGGLE:
+                try {
+                    ((GameRoom) currentRoom).handleExtraOptionsToggle(this);
+                } catch (Exception e) {
+                    sendMessage(Constants.DEFAULT_CLIENT_ID, "You must be in a GameRoom to toggle extra options.");
+                }
+                break;
+            // UCID: gb373
+            // Date: 07/28/2025
+            // Summary: Handles the away toggle action in the game from the server.
+            case AWAY_TOGGLE:
+                boolean isAwayToggle = Boolean.parseBoolean(incoming.getMessage());
+                LoggerUtil.INSTANCE
+                        .info("Received AWAY_TOGGLE from client " + this.getClientId() + ": " + isAwayToggle);
+                try {
+                    ((GameRoom) currentRoom).handleAwayToggle(this, isAwayToggle);
+                } catch (Exception e) {
+                    sendMessage(Constants.DEFAULT_CLIENT_ID, "You must be in a GameRoom to toggle away status.");
+                }
+                break;
+
             default:
                 LoggerUtil.INSTANCE.warning(
                         TextFX.colorize("Unknown payload type received: " + incoming.getPayloadType(), Color.RED));
@@ -375,6 +427,63 @@ public class ServerThread extends BaseServerThread {
     public void changePoints(int delta) {
         int updatedPoints = getPoints() + delta;
         setPoints(updatedPoints);
+    }
+
+    // UCID: gb373
+    // Date: 07/23/2025
+    // Summary: Sends the pending pick status to the client, indicating whether the
+    // player is currently pending a pick action.
+    public boolean sendPendingStatus(long clientId, boolean isPending) {
+        Payload payload = new Payload();
+        payload.setPayloadType(PayloadType.PENDING_PICK);
+        payload.setClientId(clientId);
+        payload.setMessage(Boolean.toString(isPending));
+        return sendToClient(payload);
+    }
+
+    // UCID: gb373
+    // Date: 07/23/2025
+    // Summary: Sends the elimination status to the client, indicating whether the
+    // player has been eliminated.
+    public boolean sendEliminationStatus(long clientId, boolean isEliminated) {
+        Payload payload = new Payload();
+        payload.setPayloadType(PayloadType.ELIMINATED);
+        payload.setClientId(clientId);
+        payload.setMessage(Boolean.toString(isEliminated));
+        return sendToClient(payload);
+    }
+
+    private boolean away = false;
+
+    public boolean isAway() {
+        return away;
+    }
+
+    public void setAway(boolean a) {
+        this.away = a;
+    }
+
+    // In ServerThread class (player)
+    private boolean spectator = false;
+
+    public boolean isSpectator() {
+        return spectator;
+    }
+
+    public void setSpectator(boolean spectator) {
+        this.spectator = spectator;
+    }
+
+    // UCID: gb373
+    // Date: 07/28/2025
+    // Summary: Sends the spectator status to the client, indicating whether the
+    // player is a spectator.
+    public void sendSpectatorStatus(long clientId, boolean isSpectator) {
+        Payload payload = new Payload();
+        payload.setPayloadType(PayloadType.SPECTATOR_STATUS);
+        payload.setClientId(clientId);
+        payload.setMessage(Boolean.toString(isSpectator));
+        sendToClient(payload);
     }
 
 }

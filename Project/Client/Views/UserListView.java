@@ -155,14 +155,14 @@ public class UserListView extends JPanel
     }
 
     @Override
-    public void onTookTurn(long clientId, boolean didtakeCurn) {
+    public void onTookTurn(long clientId, boolean didtakeTurn) {
         if (clientId == Constants.DEFAULT_CLIENT_ID) {
             SwingUtilities.invokeLater(() -> {
                 userItemsMap.values().forEach(u -> u.setTurn(false));// reset all
             });
         } else if (userItemsMap.containsKey(clientId)) {
             SwingUtilities.invokeLater(() -> {
-                userItemsMap.get(clientId).setTurn(didtakeCurn);
+                userItemsMap.get(clientId).setTurn(didtakeTurn);
             });
         }
     }
@@ -194,26 +194,27 @@ public class UserListView extends JPanel
         }
     }
 
-   
-    //UCID: gb373
-    // Date: 07/22/2025
-    // Summary: Sorts the user list based on points and names if there is a tie.
+    // UCID: gb373
+    // Date: 07/23/2025
+    // Summary: Sorts the user list based on points and client names if there is a
+    // tie.
     private void sortUserList() {
         try {
-    
+            // Get sorted list
+            List<UserListItem> sortedItems = userItemsMap.values().stream()
+                    .sorted((a, b) -> {
+                        int cmp = Integer.compare(b.getPoints(), a.getPoints());
+                        if (cmp == 0) {
+                            return a.getClientName().compareToIgnoreCase(b.getClientName());
+                        }
+                        return cmp;
+                    })
+                    .toList();
+
+            // Clear UI
             userListArea.removeAll();
 
-            List<UserListItem> sortedItems = userItemsMap.values().stream()
-                .sorted((a, b) -> {
-                    int cmp = Integer.compare(b.getPoints(), a.getPoints());
-                    if (cmp == 0) {
-                        return a.getClientName().compareToIgnoreCase(b.getClientName());
-                    }
-                    return cmp;
-                })
-                .toList();
-
-
+            // Re-add sorted items
             GridBagConstraints gbc = new GridBagConstraints();
             gbc.gridx = 0;
             gbc.weightx = 1;
@@ -227,12 +228,43 @@ public class UserListView extends JPanel
                 userListArea.add(item, gbc);
             }
 
-            userListArea.add(Box.createVerticalGlue(), lastConstraints);
+            // Re-add glue to push list to top
+            gbc.gridy = y;
+            gbc.weighty = 1.0;
+            userListArea.add(Box.createVerticalGlue(), gbc);
 
+            // Refresh UI
             userListArea.revalidate();
             userListArea.repaint();
+
         } catch (Exception e) {
             LoggerUtil.INSTANCE.severe("Error sorting user list", e);
+        }
+    }
+
+    // UCID: gb373
+    // Date: 07/23/2025
+    // Summary: Handles pending pick updates and pick actions for users.
+    public void onPendingUpdate(long clientId, boolean isPending) {
+        if (userItemsMap.containsKey(clientId)) {
+            SwingUtilities.invokeLater(() -> userItemsMap.get(clientId).setPendingPick(isPending));
+        }
+    }
+
+    @Override
+    public void onPendingPick(long clientId, boolean isPending) {
+        if (userItemsMap.containsKey(clientId)) {
+            SwingUtilities.invokeLater(() -> userItemsMap.get(clientId).setPendingPick(isPending));
+        }
+    }
+
+    // UCID: gb373
+    // Date: 07/23/2025
+    // Summary: Handles elimination status updates for users.
+    @Override
+    public void onEliminationStatus(long clientId, boolean isEliminated) {
+        if (userItemsMap.containsKey(clientId)) {
+            SwingUtilities.invokeLater(() -> userItemsMap.get(clientId).setEliminated(isEliminated));
         }
     }
 
@@ -258,4 +290,40 @@ public class UserListView extends JPanel
             });
         }
     }
+
+    @Override
+    public void onExtraOptionsEnabled(boolean enabled) {
+    }
+
+    @Override
+    public void onExtraOptionsToggle(boolean enabled) {
+    }
+
+    @Override
+    public void onCooldownOptionsToggle(boolean enabled) {
+    }
+
+    @Override
+    public void onAwayStatusChange(long clientId, boolean isAway) {
+        if (userItemsMap.containsKey(clientId)) {
+            SwingUtilities.invokeLater(() -> {
+                userItemsMap.get(clientId).setAway(isAway);
+            });
+        }
+    }
+
+    @Override
+    public void onAwayStatusToggle(boolean enabled) {
+    }
+
+    @Override
+    public void onSpectatorStatusChange(long clientId, boolean isSpectator) {
+        if (userItemsMap.containsKey(clientId)) {
+            SwingUtilities.invokeLater(() -> {
+                UserListItem item = userItemsMap.get(clientId);
+                item.setSpectator(isSpectator);
+            });
+        }
+    }
+
 }

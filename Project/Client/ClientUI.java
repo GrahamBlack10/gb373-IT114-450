@@ -42,7 +42,6 @@ public class ClientUI extends JFrame implements ICardControls, IConnectionEvents
     private UserDetailsView userDetailsView;
     private ChatGameView chatGameView;
     private RoomsView roomsView;
-    // logger
     {
         // Note: Moved from Client as this file is the entry point now
         // statically initialize the client-side LoggerUtil
@@ -80,6 +79,7 @@ public class ClientUI extends JFrame implements ICardControls, IConnectionEvents
         // handle window close
         setDefaultCloseOperation(JFrame.DO_NOTHING_ON_CLOSE);
         // confirmation dialog to prevent accidental closure
+
         this.addWindowListener(new WindowAdapter() {
             @Override
             public void windowClosing(WindowEvent windowEvent) {
@@ -109,6 +109,7 @@ public class ClientUI extends JFrame implements ICardControls, IConnectionEvents
         frameContainer.add(currentRoomLabel, BorderLayout.NORTH);
         frameContainer.add(cardContainer, BorderLayout.CENTER);
 
+       
         // initialize views
         // "this" contains the interfaces used for callbacks
         connectionView = new ConnectionView(this);
@@ -223,7 +224,6 @@ public class ClientUI extends JFrame implements ICardControls, IConnectionEvents
 
     @Override
     public void onReceiveRoomList(List<String> rooms, String message) {
-        // unused
     }
     // Client interface callbacks end
 
