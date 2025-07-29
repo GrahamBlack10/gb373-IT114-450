@@ -2,6 +2,7 @@ package Project.Common;
 
 public class ConnectionPayload extends Payload {
     private String clientName;
+    private boolean wantsSpectator;
 
     /**
      * @return the clientName
@@ -24,4 +25,11 @@ public class ConnectionPayload extends Payload {
                         getClientName());
     }
 
+    public void setWantsSpectator(boolean wantsSpectator) {
+        this.wantsSpectator = wantsSpectator;
+    }
+
+    public boolean getWantsSpectator() {
+        return wantsSpectator;
+    }
 }

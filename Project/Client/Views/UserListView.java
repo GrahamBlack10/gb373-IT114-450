@@ -298,4 +298,32 @@ public class UserListView extends JPanel
     @Override
     public void onExtraOptionsToggle(boolean enabled) {
     }
+
+    @Override
+    public void onCooldownOptionsToggle(boolean enabled) {
+    }
+
+    @Override
+    public void onAwayStatusChange(long clientId, boolean isAway) {
+        if (userItemsMap.containsKey(clientId)) {
+            SwingUtilities.invokeLater(() -> {
+                userItemsMap.get(clientId).setAway(isAway);
+            });
+        }
+    }
+
+    @Override
+    public void onAwayStatusToggle(boolean enabled) {
+    }
+
+    @Override
+    public void onSpectatorStatusChange(long clientId, boolean isSpectator) {
+        if (userItemsMap.containsKey(clientId)) {
+            SwingUtilities.invokeLater(() -> {
+                UserListItem item = userItemsMap.get(clientId);
+                item.setSpectator(isSpectator);
+            });
+        }
+    }
+
 }

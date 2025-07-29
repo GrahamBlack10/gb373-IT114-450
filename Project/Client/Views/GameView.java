@@ -72,4 +72,18 @@ public class GameView extends JPanel implements IPhaseEvent {
         playView.changePhase(phase);
     }
 
+    @Override
+    public void onAwayStatusChange(long userId, boolean isAway) {
+        System.out.println("User " + userId + " away status changed: " + isAway);
+    }
+
+    @Override
+    public void onAwayStatusToggle(boolean isAway) {
+        System.out.println("Away status toggled: " + isAway);
+    }
+
+    @Override
+    public void onSpectatorStatusChange(long userId, boolean isSpectator) {
+        System.out.println("User " + userId + " spectator status changed: " + isSpectator);
+    }
 }

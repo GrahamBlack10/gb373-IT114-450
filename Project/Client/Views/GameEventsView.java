@@ -9,6 +9,7 @@ import java.awt.Insets;
 
 import javax.swing.BorderFactory;
 import javax.swing.Box;
+import javax.swing.JButton;
 import javax.swing.JEditorPane;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
@@ -62,6 +63,20 @@ public class GameEventsView extends JPanel implements IPhaseEvent, IReadyEvent, 
         this.add(timerText, BorderLayout.NORTH);
         timerText.setVisible(false);
         Client.INSTANCE.registerCallback(this);
+        // UCID: gb373
+        // Date: 07/28/2025
+        // Summary: The button for toggling the away status of the user.
+        JButton awayButton = new JButton("Mark Away");
+
+        awayButton.addActionListener(e -> {
+            Client.INSTANCE.toggleAwayStatus();
+            boolean newAway = Client.INSTANCE.isAway();
+            awayButton.setText(newAway ? "Back" : "Mark Away");
+        });
+
+        this.add(awayButton, BorderLayout.SOUTH);
+        awayButton.setVisible(true);
+
     }
 
     public void addText(String text) {
@@ -158,4 +173,43 @@ public class GameEventsView extends JPanel implements IPhaseEvent, IReadyEvent, 
         });
     }
 
+    // UCID: gb373
+    // Date: 07/28/2025
+    // Summary: Handles the cooldown options toggle event.
+    @Override
+    public void onCooldownOptionsToggle(boolean toggled) {
+        System.out.println("onCooldownOptionsToggle called with: " + toggled);
+
+        SwingUtilities.invokeLater(() -> {
+            if (Client.INSTANCE.getPlayView() != null) {
+                System.out.println("Updating PlayView with cooldownOptionsEnabled: " + toggled);
+                Client.INSTANCE.getPlayView().setCooldownOptionsEnabled(toggled);
+            } else {
+                System.out.println("PlayView is null!");
+            }
+        });
+    }
+
+    // UCID: gb373
+    // Date: 07/28/2025
+    // Summary: Handles the away status change event and sending a message to the panel about the status change.
+    @Override
+    public void onAwayStatusChange(long clientId, boolean isAway) {
+        String name = Client.INSTANCE.getDisplayNameFromId(clientId);
+        addText(name + (isAway ? " is away." : " is no longer away."));
+    }
+
+    @Override
+    public void onAwayStatusToggle(boolean toggled) {
+        System.out.println("onAwayStatusToggle called with: " + toggled);
+    }
+
+    // UCID: gb373
+    // Date: 07/28/2025
+    // Summary: Handles the spectator status change event and sending a message to the panel about the status change.
+    @Override
+    public void onSpectatorStatusChange(long clientId, boolean isSpectator) {
+        String name = Client.INSTANCE.getDisplayNameFromId(clientId);
+        addText(name + (isSpectator ? " is now spectating." : " is no longer spectating."));
+    }
 }

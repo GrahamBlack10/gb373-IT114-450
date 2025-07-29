@@ -95,6 +95,17 @@ public class ChatGameView extends JPanel implements IRoomEvents, IPhaseEvent {
     @Override
     public void onReceivePhase(Phase phase) {
         showGameView();
+    }
 
+    @Override
+    public void onAwayStatusChange(long clientId, boolean isAway) {
+    }
+
+    @Override
+    public void onAwayStatusToggle(boolean isAway) {
+    }
+
+    @Override
+    public void onSpectatorStatusChange(long clientId, boolean isSpectator) {
     }
 }

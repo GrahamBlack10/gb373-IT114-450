@@ -68,6 +68,7 @@ public class User {
     public void setTookTurn(boolean tookTurn) {
         this.tookTurn = tookTurn;
     }
+
     public int getPoints() {
         return points;
     }
@@ -80,7 +81,7 @@ public class User {
         this.points += delta;
     }
 
-     private boolean eliminated = false;
+    private boolean eliminated = false;
 
     public boolean isEliminated() {
         return eliminated;
@@ -89,5 +90,24 @@ public class User {
     public void setEliminated(boolean eliminated) {
         this.eliminated = eliminated;
     }
-    
+
+    private boolean away = false;
+
+    public void setAway(boolean away) {
+        this.away = away;
+    }
+
+    public boolean isAway() {
+        return away;
+    }
+
+    private boolean spectator = false;
+
+    public void setSpectator(boolean spectator) {
+        this.spectator = spectator;
+    }
+
+    public boolean isSpectator() {
+        return spectator;
+    }
 }

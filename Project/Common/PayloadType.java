@@ -35,4 +35,9 @@ public enum PayloadType {
        EXTRA_OPTIONS_TOGGLE, // used to toggle extra options in the game
        TURN_CONFIRMED, // used to confirm a player's turn choice
        HOST_STATUS, // used to indicate the host status of a player
+       CHOICE_COOLDOWN_TOGGLE, // used to toggle choice cooldowns
+       CHOICE_COOLDOWN_ENABLED, // used to enable or disable choice cooldowns
+       AWAY_UPDATE, // used to update a player's away status
+       AWAY_TOGGLE, // used to toggle a player's away status
+       SPECTATOR_STATUS, // used to update a player's spectator status
 }

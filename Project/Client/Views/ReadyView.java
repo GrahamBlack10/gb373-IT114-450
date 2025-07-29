@@ -20,7 +20,7 @@ public class ReadyView extends JPanel {
         });
         this.add(readyButton);
 
-        //UCID: gb373
+        // UCID: gb373
         // Date: 07/24/2025
         // Summary: This button allows the user to toggle extra options in the game.
         // Extra Options toggle button
@@ -36,6 +36,21 @@ public class ReadyView extends JPanel {
             }
         });
         this.add(extraButton);
+
+        // UCID: gb373
+        // Date: 07/28/2025
+        // Summary: This button allows the user to toggle cooldown options in the game.
+        JButton cooldownButton = new JButton("Toggle Cooldown");
+        cooldownButton.addActionListener(e -> {
+            Payload p = new Payload();
+            p.setPayloadType(PayloadType.CHOICE_COOLDOWN_TOGGLE); 
+            p.setMessage("true"); 
+            try {
+                Client.INSTANCE.sendPayload(p);
+            } catch (IOException ex) {
+                ex.printStackTrace();
+            }
+        });
+        this.add(cooldownButton);
     }
-    
 }

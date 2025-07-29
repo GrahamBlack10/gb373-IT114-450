@@ -54,21 +54,42 @@ public class PlayView extends JPanel {
         repaint();
     }
 
+    // UCID: gb373
+    // Date: 07/28/2025
+    // Summary: This method is called when the cooldown options are toggled.
+    // It updates the UI to reflect the cooldown status.
+    public void setCooldownOptionsEnabled(boolean enabled) {
+        System.out.println("setCooldownOptionsEnabled called with: " + enabled);
+        Client.INSTANCE.setChoiceCooldownEnabled(enabled);
+
+        if (currentPhase == Phase.IN_PROGRESS) {
+            highlightSelectedButton(Client.INSTANCE.getLastChoice());
+        }
+    }
     private void sendPick(String choice) {
         try {
+            Client.INSTANCE.setLastChoice(choice);
+            if (Client.INSTANCE.isChoiceCooldownEnabled()) {
+                highlightSelectedButton(choice);
+            }
             Client.INSTANCE.sendDoTurn(choice);
-            highlightSelectedButton(choice);
         } catch (IOException ex) {
             ex.printStackTrace();
         }
     }
 
     // UCID: gb373
-    // Date: 07/23/2025
-    // Summary: Highlights the selected button and disables others to indicate the user's choice.
+    // Date: 07/28/2025
+    // Summary: Highlights the selected button and disables others to indicate the
+    // user's choice.
     // This helps prevent multiple selections during the turn.
     // Has Extra Options: Fire and Water
+    // The cooldown feature is enabled, it will disable the buttons for the
+    // selected choice for one turn.
     private void highlightSelectedButton(String choice) {
+        if (!Client.INSTANCE.isChoiceCooldownEnabled())
+            return;
+
         rockButton.setEnabled(!"r".equals(choice));
         paperButton.setEnabled(!"p".equals(choice));
         scissorsButton.setEnabled(!"s".equals(choice));
@@ -89,7 +110,7 @@ public class PlayView extends JPanel {
             scissorsButton.setEnabled(true);
             fireButton.setEnabled(true);
             waterButton.setEnabled(true);
-        } 
+        }
     }
 
     private void setButtonsVisible(boolean visible) {
@@ -109,6 +130,7 @@ public class PlayView extends JPanel {
     }
 
     public void setHost(boolean hostStatus) {
+        Client.INSTANCE.setHost(hostStatus);
     }
 
 }

@@ -45,6 +45,7 @@ public class GameRoom extends BaseGameRoom {
     protected void onClientAdded(ServerThread sp) {
         syncCurrentPhase(sp);
         syncReadyStatus(sp);
+
         if (currentPhase != Phase.READY) {
             syncTurnStatus(sp);
             syncPlayerPoints(sp);
@@ -54,11 +55,12 @@ public class GameRoom extends BaseGameRoom {
         // Date: 07/24/2025
         // Summary: Setting the host status for the client.
         boolean isHost = clientsInRoom.size() == 1;
-
         Payload hostPayload = new Payload();
         hostPayload.setPayloadType(PayloadType.HOST_STATUS);
         hostPayload.setMessage(Boolean.toString(isHost));
         sp.sendToClient(hostPayload);
+
+        handleReady(sp, true, false); // wantsSpectator = true, isReady = false
     }
 
     @Override
@@ -87,23 +89,21 @@ public class GameRoom extends BaseGameRoom {
         resetRoundTimer();
         resetPlayerChoices();
 
+        // UCID: gb373
+        // Date: 07/28/2025
+        // Summary: Sync the pending status of players at the start of the round.
+        // Away players are not considered pending.
         clientsInRoom.values().forEach(p -> {
-            if (!p.isEliminated()) {
-                p.sendEliminationStatus(p.getClientId(), false);
+            if (!p.isEliminated() && !p.isAway()) {
+                clientsInRoom.values().forEach(other -> {
+                    other.sendPendingStatus(p.getClientId(), true);
+                });
             }
         });
 
         changePhase(Phase.IN_PROGRESS);
         round++;
         sendGameEvent("Round " + round + " has started! Use /pick r/p/s");
-
-        clientsInRoom.values().forEach(p -> {
-            if (!p.isEliminated()) {
-                clientsInRoom.values().forEach(other -> {
-                    other.sendPendingStatus(p.getClientId(), true);
-                });
-            }
-        });
 
         // Start 30-second timer for the round
         roundTimer = new TimedEvent(30, this::onRoundEnd);
@@ -122,15 +122,16 @@ public class GameRoom extends BaseGameRoom {
         resetRoundTimer();
 
         // Eliminate players who didn't choose
+        // Away players are not eliminated for not picking.
         clientsInRoom.values().forEach(p -> {
-            if (!p.isEliminated() && p.getChoice() == null) {
+            if (!p.isEliminated() && !p.isAway() && p.getChoice() == null && !p.isSpectator()) {
                 p.setEliminated(true);
                 sendGameEvent(p.getDisplayName() + " was eliminated for not picking.");
             }
         });
 
         List<ServerThread> active = clientsInRoom.values().stream()
-                .filter(p -> !p.isEliminated() && p.getChoice() != null)
+                .filter(p -> !p.isEliminated() && !p.isSpectator() && p.getChoice() != null)
                 .collect(Collectors.toList());
 
         Set<ServerThread> toEliminate = new HashSet<>();
@@ -177,8 +178,11 @@ public class GameRoom extends BaseGameRoom {
             }
         }
 
+        // UCID: gb373
+        // Date: 07/28/2025
+        // Summary: Away players are not eliminated, but they can't win.
         long survivors = clientsInRoom.values().stream()
-                .filter(p -> !p.isEliminated())
+                .filter(p -> !p.isEliminated() && !p.isAway() && !p.isSpectator())
                 .count();
 
         sendGameEvent("Survivors remaining: " + survivors);
@@ -254,6 +258,14 @@ public class GameRoom extends BaseGameRoom {
                 player.sendMessage(Constants.DEFAULT_CLIENT_ID, "You already picked.");
                 return;
             }
+            if (player.isAway()) {
+                player.sendMessage(Constants.DEFAULT_CLIENT_ID, "You are marked as away.");
+                return;
+            }
+            if (player.isSpectator()) {
+                player.sendMessage(Constants.DEFAULT_CLIENT_ID, "Spectators cannot make moves.");
+                return;
+            }
 
             choice = choice.trim().toLowerCase();
 
@@ -279,8 +291,12 @@ public class GameRoom extends BaseGameRoom {
             confirm.setPayloadType(PayloadType.TURN_CONFIRMED);
             player.sendToClient(confirm);
 
+            // UCID: gb373
+            // Date: 07/28/2025
+            // Summary: Sync the player's points with all other players.
+            // Ignores eliminated and away players.
             long remaining = clientsInRoom.values().stream()
-                    .filter(p -> !p.isEliminated() && p.getChoice() == null)
+                    .filter(p -> !p.isEliminated() && !p.isAway() && !p.isSpectator() && p.getChoice() == null)
                     .count();
 
             if (remaining == 0) {
@@ -298,22 +314,56 @@ public class GameRoom extends BaseGameRoom {
         }
     }
 
-    protected void handleReady(ServerThread player) {
+    // UCID: gb373
+    // Date: 07/28/2025
+    // Summary: Handles the ready status of a player in the GameRoom.
+    // If the player is ready, they are marked as ready and can start the game.
+    // Spectators are not allowed to be ready.
+    // If the player is not ready, they are marked as a spectator.
+    // If the game is not in the READY phase, the player is marked as a spectator.
+    // If the player is already ready, they are not marked as a spectator.
+    protected void handleReady(ServerThread player, boolean wantsSpectator, boolean isReady) {
+
         if (currentPhase != Phase.READY) {
-            player.sendMessage(Constants.DEFAULT_CLIENT_ID, "You can't ready up now.");
+            player.setSpectator(true);
+            player.setReady(false);
+            player.setEliminated(false);
+            player.setAway(false);
+            sendGameEvent(player.getDisplayName() + " joined late as a spectator.");
+            broadcastSpectatorStatus(player.getClientId(), true);
+
             return;
         }
 
-        player.setReady(true);
-        sendReadyStatus(player, true);
+        if (!isReady) {
+            player.setSpectator(true);
+            player.setReady(false);
+            player.setEliminated(false);
+            player.setAway(false);
+            sendGameEvent(player.getDisplayName() + " joined as a spectator.");
+            broadcastSpectatorStatus(player.getClientId(), true);
 
-        boolean allReady = clientsInRoom.values().stream().allMatch(ServerThread::isReady);
+        } else {
+            player.setSpectator(false);
+            player.setReady(true);
+            player.setEliminated(false);
+            player.setAway(false);
+            sendReadyStatus(player, true);
+            broadcastSpectatorStatus(player.getClientId(), false);
 
-        // Ensure at least 2 players before starting the game
-        if (allReady && clientsInRoom.size() >= 2) {
+        }
+
+        // Continue existing check if all active players are ready
+        List<ServerThread> activePlayers = clientsInRoom.values().stream()
+                .filter(p -> !p.isSpectator())
+                .collect(Collectors.toList());
+
+        boolean allReady = activePlayers.stream().allMatch(p -> p.isReady() && !p.isSpectator());
+
+        if (allReady && activePlayers.size() >= 2) {
             onSessionStart();
         } else if (allReady) {
-            sendGameEvent("At least 2 players are required to start the game.");
+            sendGameEvent("At least 2 active players are required to start the game.");
         }
     }
 
@@ -428,8 +478,10 @@ public class GameRoom extends BaseGameRoom {
     @Override
     protected void syncReadyStatus(ServerThread p) {
         clientsInRoom.values().forEach(other -> {
-            if (other != p)
+            if (other != p) {
                 p.sendReadyStatus(other.getClientId(), other.isReady(), true);
+                p.sendSpectatorStatus(other.getClientId(), other.isSpectator());
+            }
         });
     }
 
@@ -446,9 +498,60 @@ public class GameRoom extends BaseGameRoom {
         });
     }
 
+    private void broadcastSpectatorStatus(long clientId, boolean isSpectator) {
+        clientsInRoom.values().forEach(client -> {
+            client.sendSpectatorStatus(clientId, isSpectator);
+        });
+    }
+
     private boolean isHost(ServerThread player) {
         return clientsInRoom.values().stream().findFirst().map(p -> p.getClientId() == player.getClientId())
                 .orElse(false);
+    }
+
+    private boolean choiceCooldownEnabled = false;
+
+    // UCID: gb373
+    // Date: 07/28/2025
+    // Summary: Toggle choice cooldown for the game; only the host can do this.
+    protected void handleChoiceCooldownToggle(ServerThread player) {
+        if (currentPhase != Phase.READY) {
+            player.sendMessage(Constants.DEFAULT_CLIENT_ID,
+                    "You can only toggle choice cooldown during the ready phase.");
+            return;
+        }
+
+        boolean isHost = isHost(player);
+        if (!isHost) {
+            player.sendMessage(Constants.DEFAULT_CLIENT_ID, "Only the host can toggle choice cooldown.");
+            return;
+        }
+
+        this.choiceCooldownEnabled = !this.choiceCooldownEnabled;
+
+        Payload payload = new Payload();
+        payload.setPayloadType(PayloadType.CHOICE_COOLDOWN_TOGGLE);
+        payload.setMessage(Boolean.toString(this.choiceCooldownEnabled));
+        sendToAllClients(payload);
+
+        sendGameEvent("Choice cooldown is now " + (choiceCooldownEnabled ? "ENABLED" : "DISABLED"));
+    }
+
+    public boolean isChoiceCooldownEnabled() {
+        return choiceCooldownEnabled;
+    }
+
+    // UCID: gb373
+    // Date: 07/28/2025
+    // Summary: Handles the away toggle for a player.
+    protected void handleAwayToggle(ServerThread player, boolean newAway) {
+        player.setAway(newAway);
+
+        Payload p = new Payload();
+        p.setPayloadType(PayloadType.AWAY_UPDATE);
+        p.setClientId(player.getClientId());
+        p.setMessage(String.valueOf(newAway));
+        sendToAllClients(p);
     }
 
 }

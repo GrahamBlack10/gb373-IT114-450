@@ -159,4 +159,33 @@ public class UserListItem extends JPanel {
         }
     }
 
+    // UCID: gb373
+    // Date: 07/28/2025
+    // Summary: Sets the away status of the user. Setting the background to grey for
+    // away users.
+    public void setAway(boolean isAway) {
+        if (isAway) {
+            setBackground(Color.LIGHT_GRAY);
+            textContainer.setForeground(Color.GRAY);
+        } else {
+            setBackground(null);
+            textContainer.setForeground(Color.BLACK);
+        }
+        revalidate();
+        repaint();
+    }
+
+    public void setSpectator(boolean isSpectator) {
+    if (isSpectator) {
+        textContainer.setText(displayName + " (Spectator)");
+        textContainer.setForeground(Color.BLUE);
+    } else {
+        textContainer.setText(displayName);
+        textContainer.setForeground(Color.BLACK);
+    }
+    textContainer.revalidate();
+    textContainer.repaint();
+}
+
+
 }

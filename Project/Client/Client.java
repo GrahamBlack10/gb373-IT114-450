@@ -17,6 +17,7 @@ import javax.swing.SwingUtilities;
 
 import Project.Client.Interfaces.IClientEvents;
 import Project.Client.Interfaces.IConnectionEvents;
+import Project.Client.Interfaces.IGameEvents;
 import Project.Client.Interfaces.IMessageEvents;
 import Project.Client.Interfaces.IPhaseEvent;
 import Project.Client.Interfaces.IPointsEvent;
@@ -68,6 +69,11 @@ public enum Client implements IReadyEvent {
     private final ConcurrentHashMap<Long, User> knownClients = new ConcurrentHashMap<Long, User>();
     private User myUser = new User();
     private Phase currentPhase = Phase.READY;
+
+    public long getClientId() {
+        return myUser != null ? myUser.getClientId() : Project.Common.Constants.DEFAULT_CLIENT_ID;
+    }
+
     // callback that updates the UI
     private static List<IClientEvents> events = new ArrayList<IClientEvents>();
     private GameRoom currentRoom;
@@ -340,8 +346,10 @@ public enum Client implements IReadyEvent {
      */
     public void sendReady() throws IOException {
         ReadyPayload rp = new ReadyPayload();
-        // rp.setReady(true); // <- technically not needed as we'll use the payload type
-        // as a trigger
+        rp.setPayloadType(PayloadType.READY);
+        rp.setClientId(getClientId());
+        rp.setReady(true);
+        rp.setMessage("false"); 
         sendToServer(rp);
     }
 
@@ -604,6 +612,55 @@ public enum Client implements IReadyEvent {
                 if (getPlayView() != null) {
                     getPlayView().setHost(isHost);
                 }
+                break;
+            // UCID: gb373
+            // Date: 07/28/2025
+            // Summary: Added CHOICE_COOLDOWN_TOGGLE and CHOICE_COOLDOWN_ENABLED to handle
+            // choice cooldown options.
+            case CHOICE_COOLDOWN_TOGGLE:
+                boolean cooldownEnabled = Boolean.parseBoolean(payload.getMessage());
+                Client.INSTANCE.setChoiceCooldownEnabled(cooldownEnabled);
+                passToUICallback(IReadyEvent.class, e -> {
+                    if (e instanceof IReadyEvent) {
+                        ((IReadyEvent) e).onCooldownOptionsToggle(cooldownEnabled);
+                    }
+                });
+                break;
+
+            case CHOICE_COOLDOWN_ENABLED:
+                boolean choiceCooldown = Boolean.parseBoolean(payload.getMessage());
+                setChoiceCooldownEnabled(choiceCooldown);
+                passToUICallback(IReadyEvent.class, e -> {
+                    if (e instanceof IReadyEvent) {
+                        ((IReadyEvent) e).onCooldownOptionsToggle(choiceCooldown);
+                    }
+                });
+                break;
+            case AWAY_UPDATE: {
+                long clientId = payload.getClientId();
+                boolean isAway = Boolean.parseBoolean(payload.getMessage());
+                User user = knownClients.get(clientId);
+                if (user != null) {
+                    user.setAway(isAway);
+                }
+                passToUICallback(IGameEvents.class, e -> e.onAwayStatusChange(clientId, isAway));
+                break;
+            }
+
+            case AWAY_TOGGLE: {
+                boolean isAwayToggle = Boolean.parseBoolean(payload.getMessage());
+                myUser.setAway(isAwayToggle);
+                passToUICallback(IGameEvents.class, e -> e.onAwayStatusToggle(isAwayToggle));
+                break;
+            }
+            // UCID: gb373
+            // Date: 07/29/2025
+            // Summary: Added SPECTATOR_STATUS to handle spectator status updates for
+            // clients.
+            case SPECTATOR_STATUS:
+                long clientId = payload.getClientId();
+                boolean isSpectator = Boolean.parseBoolean(payload.getMessage());
+                updateSpectatorDisplay(clientId, isSpectator);
                 break;
 
             default:
@@ -1037,18 +1094,23 @@ public enum Client implements IReadyEvent {
 
     @Override
     public void onExtraOptionsToggle(boolean enabled) {
-        // Implement your logic here, or leave empty if not needed
-        // Example: update UI or internal state
         SwingUtilities.invokeLater(() -> {
-            // Example: playView.setExtraOptionsToggle(enabled);
+        });
+    }
+
+    @Override
+    public void onCooldownOptionsToggle(boolean enabled) {
+        SwingUtilities.invokeLater(() -> {
         });
     }
 
     @Override
     public void onReceiveReady(long clientId, boolean isReady, boolean isQuiet) {
-        // Implement your logic here, or leave empty if not needed
-        // Example: update UI or internal state
-        // Example: playView.updateReadyStatus(clientId, isReady, isQuiet);
+    }
+
+    @Override
+    public void onAwayStatusToggle(boolean isAwayToggle) {
+        LoggerUtil.INSTANCE.info("onAwayStatusToggle called with: " + isAwayToggle);
     }
 
     public boolean isExtraOptionsEnabled() {
@@ -1057,6 +1119,119 @@ public enum Client implements IReadyEvent {
 
     public void setExtraOptionsEnabled(boolean enabled) {
         this.extraOptionsEnabled = enabled;
+    }
+
+    private boolean choiceCooldownEnabled = false;
+
+    public void setChoiceCooldownEnabled(boolean enabled) {
+        this.choiceCooldownEnabled = enabled;
+    }
+
+    public boolean isChoiceCooldownEnabled() {
+        return choiceCooldownEnabled;
+    }
+
+    private String lastChoice = null;
+
+    public void setLastChoice(String choice) {
+        this.lastChoice = choice;
+    }
+
+    public String getLastChoice() {
+        return lastChoice;
+    }
+
+    private boolean host = false; // Track if this client is host
+
+    public boolean isHost() {
+        return host;
+    }
+
+    // You should also have a way to set this, e.g.:
+    public void setHost(boolean host) {
+        this.host = host;
+    }
+
+    private boolean isAway = false;
+
+    public boolean isAway() {
+        return isAway;
+    }
+
+    public void setAway(boolean isAway) {
+        this.isAway = isAway;
+    }
+
+    // UCID: gb373
+    // Date: 07/28/2025
+    // Summary: Sends an away toggle payload to the server.
+    public void sendAwayToggle(boolean isAway) {
+        LoggerUtil.INSTANCE.info("Sending away toggle payload: " + isAway);
+        Payload p = new Payload();
+        p.setPayloadType(PayloadType.AWAY_TOGGLE);
+        p.setMessage(Boolean.toString(isAway));
+        try {
+            sendPayload(p);
+        } catch (IOException e) {
+            LoggerUtil.INSTANCE.severe("Failed to send away toggle payload", e);
+        }
+    }
+
+    // UCID: gb373
+    // Date: 07/28/2025
+    // Summary: Toggles the away status of the client.
+    public void toggleAwayStatus() {
+        boolean newStatus = !this.isAway;
+        this.isAway = newStatus;
+        Client.INSTANCE.sendAwayToggle(newStatus);
+        LoggerUtil.INSTANCE.info("Sending away toggle payload: " + newStatus);
+    }
+
+    // UCID: gb373
+    // Date: 07/28/2025
+    // Summary: Handles the away status change event from the server.
+    // This method updates the knownClients map and notifies the UI.
+    @Override
+    public void onAwayStatusChange(long clientId, boolean isAway) {
+
+        if (knownClients.containsKey(clientId)) {
+            knownClients.get(clientId).setAway(isAway);
+        }
+
+        if (isMyClientId(clientId)) {
+            setAway(isAway);
+        }
+
+        LoggerUtil.INSTANCE.info(String.format("Client %d away status changed to %b", clientId, isAway));
+        passToUICallback(IGameEvents.class, e -> e.onAwayStatusChange(clientId, isAway));
+    }
+
+    // UCID: gb373
+    // Date: 07/28/2025
+    // Summary: Updates the spectator display for a client in the UI.
+    private void updateSpectatorDisplay(long clientId, boolean isSpectator) {
+        if (knownClients.containsKey(clientId)) {
+            knownClients.get(clientId).setSpectator(isSpectator);
+        }
+        if (isMyClientId(clientId)) {
+            // Optionally update local state if needed
+        }
+        passToUICallback(IGameEvents.class, e -> {
+            if (e instanceof IGameEvents) {
+                ((IGameEvents) e).onSpectatorStatusChange(clientId, isSpectator);
+            }
+        });
+    }
+
+    // UCID: gb373
+    // Date: 07/28/2025
+    // Summary: Handles the spectator status change event from the server.
+    @Override
+    public void onSpectatorStatusChange(long clientId, boolean isSpectator) {
+        LoggerUtil.INSTANCE
+                .info(String.format("Spectator status changed: clientId=%d, isSpectator=%b", clientId, isSpectator));
+
+        passToUICallback(IGameEvents.class, e -> e.onSpectatorStatusChange(clientId, isSpectator));
     }
 
 }

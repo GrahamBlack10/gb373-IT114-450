@@ -224,7 +224,6 @@ public class ClientUI extends JFrame implements ICardControls, IConnectionEvents
 
     @Override
     public void onReceiveRoomList(List<String> rooms, String message) {
-        // unused
     }
     // Client interface callbacks end
 
